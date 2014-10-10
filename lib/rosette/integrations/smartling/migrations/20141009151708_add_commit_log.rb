@@ -1,6 +1,7 @@
 class AddCommitLog < ActiveRecord::Migration
   def up
     create_table :commit_logs do |t|
+      t.string :repo_name, limit: 255, null: false
       t.string :commit_id, limit: 45, null: false
       t.string :status, limit: 255
       t.timestamps
