@@ -6,15 +6,15 @@ namespace :rosette do
   namespace :smartling do
 
     task :setup do
-      SchemaManager.setup
+      Rosette::Integrations::Smartling::SchemaManager.setup
     end
 
     task :migrate do
-      SchemaManager.migrate
+      Rosette::Integrations::Smartling::SchemaManager.migrate
     end
 
     task :rollback do
-      SchemaManager.rollback
+      Rosette::Integrations::Smartling::SchemaManager.rollback
     end
 
   end
