@@ -1,6 +1,4 @@
 # encoding: UTF-8
-require 'active_record'
-require 'rosette/integrations/smartling/models'
 
 module Rosette
   module Integrations
