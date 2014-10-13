@@ -9,25 +9,24 @@ module Rosette
 
         attr_reader :smartling_api_key, :smartling_project_id, :targeted_locales
         attr_reader :preapprove_translations
-        attr_reader :config, :repo_config, :serializer_id
+        attr_reader :datastore, :repo_name
         attr_accessor :use_sandbox
 
         alias :preapprove_translations? :preapprove_translations
         alias :use_sandbox? :use_sandbox
 
-        def initialize(config, repo_config, serializer_id, api_options = {})
+        def initialize(datastore, repo_name = nil, api_options = {})
           api_options.keys.each do |key|
             instance_variable_set("@#{key}", api_options[key])
           end
 
-          @config = config
-          @repo_config = repo_config
-          @serializer_id = serializer_id
+          @datastore = datastore
+          @repo_name = repo_name
         end
 
-        def push(commit_id)
+        def push(commit_id, serializer_id)
           destination_filenames(commit_id).map do |destination|
-            file_for_upload(commit_id) do |tmp_file, phrase_count|
+            file_for_upload(commit_id, serializer_id) do |tmp_file, phrase_count|
               api.upload(tmp_file.path, destination, 'YAML', approved: preapprove_translations?)
             end
           end
@@ -35,6 +34,11 @@ module Rosette
           Rosette.logger.error('Caught an exception while pushing to Smartling API.')
           Rosette.logger.error("#{ex.message}\n#{ex.backtrace.join("\n")}")
           raise ex
+        end
+
+        def pull(locale)
+          file_list = api.list(locale: locale)
+          #more stuff here
         end
 
         private
@@ -52,17 +56,17 @@ module Rosette
         end
 
         def destination_filenames(commit_id)
-          [File.join(repo_config.name, "#{commit_id}.yml")]
+          [File.join(repo_name, "#{commit_id}.yml")]
         end
 
         # @TODO: this will need to change if we inline phrases because
         # we might not have meta_keys anymore (this method assumes we do)
-        def file_for_upload(commit_id)
+        def file_for_upload(commit_id, serializer_id)
           serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
 
           Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
             serializer = serializer_const.new(file)
-            phrases = config.datastore.phrases_by_commit(repo_config.name, commit_id)
+            phrases = datastore.phrases_by_commit(repo_name, commit_id)
             phrase_count = 0
 
             phrases.each do |phrase|
