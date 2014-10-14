@@ -13,8 +13,12 @@ module Rosette
 
         def push(commit_id, serializer_id)
           destination_filenames(commit_id).map do |destination|
-            file_for_upload(commit_id, serializer_id) do |tmp_file, phrase_count|
-              api.upload(tmp_file.path, destination, 'YAML', approved: preapprove_translations?)
+            file_for_upload(commit_id, serializer_id) do |tmp_file|
+              response = api.upload(tmp_file.path, destination, 'YAML', approved: preapprove_translations?)
+              phrase_count = response['stringCount']
+              datastore.add_or_update_commit_log(
+                repo_name, commit_id, Rosette::DataStores::PhraseStatus::PENDING, phrase_count
+              )
             end
           end
         rescue => ex
@@ -37,16 +41,14 @@ module Rosette
           Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
             serializer = serializer_const.new(file)
             phrases = datastore.phrases_by_commit(repo_name, commit_id)
-            phrase_count = 0
 
             phrases.each do |phrase|
               serializer.write_key_value(phrase.index_value, phrase.key)
-              phrase_count += 1
             end
 
             serializer.flush
 
-            yield file, phrase_count
+            yield file
           end
         end
 

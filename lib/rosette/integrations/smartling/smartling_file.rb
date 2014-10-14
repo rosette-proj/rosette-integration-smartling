@@ -5,11 +5,12 @@ module Rosette
     module Smartling
       class SmartlingFile
 
-        attr_reader :repo_name, :commit_id, :translated_count, :file_uri
+        attr_reader :repo_name, :commit_id, :phrase_count, :translated_count, :file_uri
 
         def initialize(repo_name, commit_id, translated_count, file_uri)
           @repo_name = repo_name
           @commit_id = commit_id
+          @phrase_count = phrase_count
           @translated_count = translated_count
           @file_uri = file_uri
         end
@@ -18,9 +19,10 @@ module Rosette
           file_uri = response['fileUri']
           repo_name = File.dirname(file_uri)
           commit_id = File.basename(file_uri).chomp(File.extname(file_uri))
+          phrase_count = response['stringCount']
           translated_count = response['completedStringCount']
 
-          new(repo_name, commit_id, translated_count, file_uri)
+          new(repo_name, commit_id, phrase_count, translated_count, file_uri)
         end
 
       end
