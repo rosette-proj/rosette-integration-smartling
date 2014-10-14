@@ -4,7 +4,10 @@ module Rosette
   module Integrations
     module Smartling
 
-      autoload :SmartlingManager, 'rosette/integrations/smartling/smartling_manager'
+      autoload :SmartlingOperation, 'rosette/integrations/smartling/smartling_operation'
+      autoload :SmartlingPusher, 'rosette/integrations/smartling/smartling_puller'
+      autoload :SmartlingPuller, 'rosette/integrations/smartling/smartling_pusher'
+
       autoload :SmartlingFile, 'rosette/integrations/smartling/smartling_file'
       autoload :SmartlingFileList, 'rosette/integrations/smartling/smartling_file_list'
 

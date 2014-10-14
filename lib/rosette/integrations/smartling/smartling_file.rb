@@ -1,7 +1,10 @@
+# encoding: UTF-8
+
 module Rosette
   module Integrations
     module Smartling
       class SmartlingFile
+
         attr_reader :repo_name, :commit_id, :translated_count, :file_uri
 
         def initialize(repo_name, commit_id, translated_count, file_uri)
@@ -19,6 +22,7 @@ module Rosette
 
           new(repo_name, commit_id, translated_count, file_uri)
         end
+
       end
     end
   end

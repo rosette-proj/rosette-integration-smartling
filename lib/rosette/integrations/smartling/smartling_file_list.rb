@@ -1,7 +1,10 @@
+# encoding: UTF-8
+
 module Rosette
   module Integrations
     module Smartling
       class SmartlingFileList
+
         include Enumerable
 
         attr_reader :file_list
