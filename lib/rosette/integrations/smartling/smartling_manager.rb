@@ -37,8 +37,11 @@ module Rosette
         end
 
         def pull(locale)
-          file_list = api.list(locale: locale)
-          #more stuff here
+          file_list_response = api.list(locale: locale)
+          file_list = Rosette::Integrations::Smartling::SmartlingFileList.from_api_response(file_list_response)
+          file_list.each do |file|
+            datastore.add_or_update_commit_log_locale(file.commit_id, locale, file.translated_count)
+          end
         end
 
         private
