@@ -12,7 +12,7 @@ module Rosette
           @configuration = configuration
         end
 
-        def pull(locale, extractor_id, encoding = nil)
+        def pull(locale, extractor_id, rosette_api, encoding = nil)
           file_list_response = api.list(locale: locale)
           file_list = SmartlingFileList.from_api_response(file_list_response)
 
@@ -33,13 +33,14 @@ module Rosette
               extractor = Rosette::Core::ExtractorId.resolve(extractor_id).new
 
               extractor.extract_each_from(file_contents) do |phrase_object|
-                configuration.datastore.add_or_update_translation(repo_config.name, {
-                    phrase_object.index_key => phrase_object.index_value,
-                    commit_id: file.commit_id,
-                    translation: phrase_object.key,
-                    locale: locale
-                  }
-                )
+                rosette_api.add_or_update_translation({
+                  phrase_object.index_key => phrase_object.index_value,
+                  ref: file.commit_id,
+                  translation: phrase_object.key,
+                  locale: locale,
+                  repo_name: repo_config.name
+                })
+
               end
             end
           end
