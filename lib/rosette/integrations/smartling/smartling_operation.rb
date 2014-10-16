@@ -9,7 +9,6 @@ module Rosette
 
         attr_reader :smartling_api_key, :smartling_project_id, :targeted_locales
         attr_reader :preapprove_translations
-        attr_reader :datastore, :repo_name
         attr_accessor :use_sandbox
 
         alias :preapprove_translations? :preapprove_translations

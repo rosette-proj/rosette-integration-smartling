@@ -17,7 +17,7 @@ module Rosette
 
         def self.from_api_response(response)
           file_uri = response['fileUri']
-          repo_name = File.dirname(file_uri)
+          repo_name = File.dirname(File.dirname(file_uri))
           commit_id = File.basename(file_uri).chomp(File.extname(file_uri))
           phrase_count = response['stringCount']
           translated_count = response['completedStringCount']
