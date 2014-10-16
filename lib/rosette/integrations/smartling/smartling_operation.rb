@@ -1,7 +1,5 @@
 # encoding: UTF-8
 
-require 'smartling'
-
 module Rosette
   module Integrations
     module Smartling

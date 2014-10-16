@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 module Rosette
   module Integrations
     module Smartling
@@ -11,9 +13,9 @@ module Rosette
         end
 
         def complete(locales)
-          file_hash ||= Hash.new{ |h, key| h[key] = [] }
-
+          file_hash ||= Hash.new { |h, key| h[key] = [] }
           file_uris_to_files = {}
+
           locales.each do |locale|
             file_list_response = api.list(locale: locale)
             file_list = SmartlingFileList.from_api_response(file_list_response)
@@ -31,9 +33,11 @@ module Rosette
             if completed_locales.sort == locales.sort
               Rosette.logger.info("Deleting file from Smartling: #{file_uri}")
               file = file_uris_to_files[file_uri]
+
               configuration.datastore.add_or_update_commit_log(
                 file.repo_name, file.commit_id, Rosette::DataStores::PhraseStatus::TRANSLATED
               )
+
               api.delete(file_uri)
             end
           end

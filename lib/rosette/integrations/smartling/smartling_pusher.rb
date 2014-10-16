@@ -46,7 +46,6 @@ module Rosette
             Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
               serializer = serializer_const.new(file)
 
-
               phrases.each do |phrase|
                 serializer.write_key_value(phrase.index_value, phrase.key)
               end
@@ -71,7 +70,6 @@ module Rosette
 
         def get_identity_string_from_email(email)
           index = email.index('@') || 0
-
           email[0..index - 1].gsub(/[^\w]/, '')
         end
 
