@@ -7,7 +7,7 @@ module Rosette
 
         attr_reader :repo_name, :commit_id, :phrase_count, :translated_count, :file_uri
 
-        def initialize(repo_name, commit_id, translated_count, file_uri)
+        def initialize(repo_name, commit_id, phrase_count, translated_count, file_uri)
           @repo_name = repo_name
           @commit_id = commit_id
           @phrase_count = phrase_count

@@ -37,18 +37,20 @@ module Rosette
         # we might not have meta_keys anymore (this method assumes we do)
         def file_for_upload(commit_id, serializer_id)
           serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
+          phrases = datastore.phrases_by_commit(repo_name, commit_id)
+          if phrases.size > 0
+            Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
+              serializer = serializer_const.new(file)
 
-          Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
-            serializer = serializer_const.new(file)
-            phrases = datastore.phrases_by_commit(repo_name, commit_id)
 
-            phrases.each do |phrase|
-              serializer.write_key_value(phrase.index_value, phrase.key)
+              phrases.each do |phrase|
+                serializer.write_key_value(phrase.index_value, phrase.key)
+              end
+
+              serializer.flush
+
+              yield file
             end
-
-            serializer.flush
-
-            yield file
           end
         end
 
