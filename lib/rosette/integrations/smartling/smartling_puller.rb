@@ -3,17 +3,17 @@
 module Rosette
   module Integrations
     module Smartling
-      class SmartlingPuller < SmartlingOperation
+      class SmartlingPuller
 
-        attr_reader :configuration
+        attr_reader :configuration, :smartling_api
 
-        def initialize(configuration, api_options = {})
-          super(api_options)
+        def initialize(configuration, smartling_api)
           @configuration = configuration
+          @smartling_api = smartling_api
         end
 
         def pull(locale, extractor_id, rosette_api, encoding = nil)
-          file_list_response = api.list(locale: locale)
+          file_list_response = smartling_api.list(locale: locale)
           file_list = SmartlingFileList.from_api_response(file_list_response)
 
           file_list.each do |file|
@@ -25,10 +25,14 @@ module Rosette
             encodings = repo_config.extractor_configs.map(&:encoding).uniq
 
             if encodings.size > 1 && !encoding
-              raise 'More than one encoding found. Please specify encoding.'
+              raise Errors::AmbiguousEncodingError,
+                'More than one encoding found. Please specify encoding when you call this method.'
             else
               encoding = encoding || encodings.first
-              file_contents = api.download(file.file_uri, locale: locale).force_encoding(encoding)
+
+              file_contents = smartling_api.download(
+                file.file_uri, locale: locale
+              ).force_encoding(encoding)
 
               extractor = Rosette::Core::ExtractorId.resolve(extractor_id).new
 

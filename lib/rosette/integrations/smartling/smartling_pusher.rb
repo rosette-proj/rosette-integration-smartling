@@ -3,11 +3,11 @@
 module Rosette
   module Integrations
     module Smartling
-      class SmartlingPusher < SmartlingOperation
-        attr_reader :configuration, :repo_name
+      class SmartlingPusher
+        attr_reader :configuration, :repo_name, :smartling_api
 
-        def initialize(configuration, repo_name, api_options = {})
-          super(api_options)
+        def initialize(configuration, repo_name, smartling_api)
+          @smartling_api = smartling_api
           @configuration = configuration
           @repo_name = repo_name
         end
@@ -15,7 +15,9 @@ module Rosette
         def push(commit_id, serializer_id)
           destination_filenames(commit_id).map do |destination|
             file_for_upload(commit_id, serializer_id) do |tmp_file|
-              response = api.upload(tmp_file.path, destination, 'YAML', approved: preapprove_translations?)
+              response = smartling_api.upload(
+                tmp_file.path, destination, 'YAML', approved: smartling_api.preapprove_translations?
+              )
               phrase_count = response['stringCount']
 
               configuration.datastore.add_or_update_commit_log(

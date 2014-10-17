@@ -3,12 +3,12 @@
 module Rosette
   module Integrations
     module Smartling
-      class SmartlingCompleter < SmartlingOperation
+      class SmartlingCompleter
 
-        attr_reader :configuration
+        attr_reader :configuration, :smartling_api
 
-        def initialize(configuration, api_options = {})
-          super(api_options)
+        def initialize(configuration, smartling_api)
+          @smartling_api = smartling_api
           @configuration = configuration
         end
 
@@ -17,7 +17,7 @@ module Rosette
           file_uris_to_files = {}
 
           locales.each do |locale|
-            file_list_response = api.list(locale: locale)
+            file_list_response = smartling_api.list(locale: locale)
             file_list = SmartlingFileList.from_api_response(file_list_response)
 
             file_list.each do |file|
@@ -38,7 +38,7 @@ module Rosette
                 file.repo_name, file.commit_id, Rosette::DataStores::PhraseStatus::TRANSLATED
               )
 
-              api.delete(file_uri)
+              smartling_api.delete(file_uri)
             end
           end
         end
