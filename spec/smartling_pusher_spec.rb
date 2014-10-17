@@ -18,10 +18,11 @@ describe SmartlingPusher do
     end
   end
 
-  let(:pusher) { SmartlingPusher.new(configuration, repo_name) }
+  let(:pusher) { SmartlingPusher.new(configuration, repo_name, smartling_api) }
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
-  let(:api) { double(:api) }
-  let(:serializer) { 'json/key-value' }
+  let(:smartling_api_base) { double(:smartling_api) }
+  let(:smartling_api) { SmartlingApi.new(smartling_api_base) }
+  let(:serializer) { 'yaml/rails' }
 
   def add_file_to_repo
     repo.create_file('foo.txt') do |f|
@@ -46,8 +47,7 @@ describe SmartlingPusher do
 
     describe '#push' do
       it 'uploads strings to smartling and updates the commit log' do
-        allow(pusher).to receive(:api).and_return(api)
-        expect(api).to receive(:upload).and_return({ 'stringCount' => 1 })
+        expect(smartling_api_base).to receive(:upload).and_return({ 'stringCount' => 1 })
         pusher.push(commit_id, serializer)
 
         log_entry = InMemoryDataStore::CommitLog.find do |entry|
@@ -60,8 +60,7 @@ describe SmartlingPusher do
       end
 
       it '(re)raises errors on smartling api error' do
-        expect(api).to receive(:upload).and_raise('Jelly beans')
-        allow(pusher).to receive(:api).and_return(api)
+        expect(smartling_api_base).to receive(:upload).and_raise('Jelly beans')
         expect { pusher.push(commit_id, serializer) }.to raise_error('Jelly beans')
       end
     end
@@ -72,8 +71,7 @@ describe SmartlingPusher do
       repo.git("config user.name 'Kathryn Janeway'")
       add_file_to_repo
 
-      allow(pusher).to receive(:api).and_return(api)
-      expect(api).to receive(:upload)
+      expect(smartling_api_base).to receive(:upload)
         .with(anything, "#{repo_name}/KathrynJaneway/#{commit_id}.yml", anything, anything)
         .and_return({ 'stringCount' => 1 })
 
@@ -84,10 +82,9 @@ describe SmartlingPusher do
       repo.git("config user.email kjaneway@starfleet.org")
       add_file_to_repo
 
-      allow(pusher).to receive(:api).and_return(api)
       allow(pusher).to receive(:get_identity_string_from_name).and_return(nil)
 
-      expect(api).to receive(:upload)
+      expect(smartling_api_base).to receive(:upload)
         .with(anything, "#{repo_name}/kjaneway/#{commit_id}.yml", anything, anything)
         .and_return({ 'stringCount' => 1 })
 
@@ -97,11 +94,10 @@ describe SmartlingPusher do
     it 'falls back to "unknown" if both the author name and email are unset' do
       add_file_to_repo
 
-      allow(pusher).to receive(:api).and_return(api)
       allow(pusher).to receive(:get_identity_string_from_name).and_return(nil)
       allow(pusher).to receive(:get_identity_string_from_email).and_return(nil)
 
-      expect(api).to receive(:upload)
+      expect(smartling_api_base).to receive(:upload)
         .with(anything, "#{repo_name}/unknown/#{commit_id}.yml", anything, anything)
         .and_return({ 'stringCount' => 1 })
 

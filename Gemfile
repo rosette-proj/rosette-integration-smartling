@@ -7,7 +7,9 @@ gem 'smartling'
 group :development, :test do
   gem 'rosette-datastore-memory', path: '~/workspace/rosette-datastore-memory'
   gem 'activemodel'
-  gem 'rosette-serializer-json', path: '~/workspace/rosette-serializer-json'
+  gem 'rosette-serializer-yaml', path: '~/workspace/rosette-serializer-yaml'
+  gem 'rosette-extractor-yaml', path: '~/workspace/rosette-extractor-yaml'
+  gem 'yaml-write-stream'
   gem 'rosette-core', path: '~/workspace/rosette-core'
   gem 'jbundler'
 
