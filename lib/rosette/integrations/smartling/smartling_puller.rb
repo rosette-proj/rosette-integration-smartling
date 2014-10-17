@@ -40,7 +40,6 @@ module Rosette
                   locale: locale,
                   repo_name: repo_config.name
                 })
-
               end
             end
           end
