@@ -22,7 +22,7 @@ describe SmartlingIntegration::SmartlingPuller do
 
   let(:puller) { SmartlingIntegration::SmartlingPuller.new(configuration, smartling_api) }
   let(:smartling_api_base) { double(:smartling_api) }
-  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new(smartling_api_base) }
+  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new }
   let(:rosette_api) { double(:rosette_api) }
   let(:extractor_id) { 'yaml/rails' }
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
@@ -45,6 +45,8 @@ describe SmartlingIntegration::SmartlingPuller do
     allow(smartling_api_base).to receive(:download).and_return(
       YAML.dump(locale => { 'foo' => { 'bar' => 'baz' } })
     )
+
+    smartling_api.instance_variable_set(:'@api', smartling_api_base)
   end
 
   context 'with a single configured extractor' do

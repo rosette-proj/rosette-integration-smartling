@@ -21,8 +21,12 @@ describe SmartlingIntegration::SmartlingPusher do
   let(:pusher) { SmartlingIntegration::SmartlingPusher.new(configuration, repo_name, smartling_api) }
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
   let(:smartling_api_base) { double(:smartling_api) }
-  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new(smartling_api_base) }
+  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new }
   let(:serializer) { 'yaml/rails' }
+
+  before(:each) do
+    smartling_api.instance_variable_set(:'@api', smartling_api_base)
+  end
 
   def add_file_to_repo
     repo.create_file('foo.txt') do |f|

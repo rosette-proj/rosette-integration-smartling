@@ -24,12 +24,16 @@ describe SmartlingIntegration::SmartlingCompleter do
 
   let(:locales) { ['ko-KR', 'ja-JP'] }
   let(:smartling_api_base) { double(:smartling_api) }
-  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new(smartling_api_base) }
+  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new }
   let(:incomplete_files) { [create_file_entry] }
   let(:complete_files) do
     3.times.map do
-      create_file_entry('stringCount' => 1, 'completedStringCount' => 1)
+      create_file_entry('repo_name' => repo_name, 'stringCount' => 1, 'completedStringCount' => 1)
     end
+  end
+
+  before(:each) do
+    smartling_api.instance_variable_set(:'@api', smartling_api_base)
   end
 
   describe '#complete' do
@@ -47,7 +51,7 @@ describe SmartlingIntegration::SmartlingCompleter do
         expect(smartling_api_base).to receive(:delete).with(file['fileUri'])
       end
 
-      completer.complete(locales)
+      completer.complete(locales, repo_name)
 
       SmartlingIntegration::SmartlingFileList.from_api_response(create_file_list(complete_files)).each do |file|
         commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|

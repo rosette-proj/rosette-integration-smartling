@@ -19,31 +19,31 @@ describe SmartlingIntegration::SmartlingApi do
 
   describe '#use_sandbox?' do
     it 'returns true/false depending on the options passed' do
-      expect(smartling_api.new(nil, use_sandbox: false).use_sandbox?).to be(false)
-      expect(smartling_api.new(nil, use_sandbox: true).use_sandbox?).to be(true)
+      expect(smartling_api.new(use_sandbox: false).use_sandbox?).to be(false)
+      expect(smartling_api.new(use_sandbox: true).use_sandbox?).to be(true)
     end
   end
 
   describe '#preapprove_translations?' do
     it 'returns true/false depending on the options passed' do
-      expect(smartling_api.new(nil, preapprove_translations: false).preapprove_translations?).to be(false)
-      expect(smartling_api.new(nil, preapprove_translations: true).preapprove_translations?).to be(true)
+      expect(smartling_api.new(preapprove_translations: false).preapprove_translations?).to be(false)
+      expect(smartling_api.new(preapprove_translations: true).preapprove_translations?).to be(true)
     end
   end
 
   describe '#api' do
     it 'returns a sandbox api when asked' do
-      api = smartling_api.new(nil, use_sandbox: true)
+      api = smartling_api.new(use_sandbox: true)
       expect(api.use_sandbox).to be(true)
     end
 
     it 'does not return return a sandbox api when asked' do
-      api = smartling_api.new(nil, use_sandbox: false)
+      api = smartling_api.new(use_sandbox: false)
       expect(api.use_sandbox).to be(false)
     end
 
     it 'uses the api credentials from the initial config' do
-      api = smartling_api.new(nil, {
+      api = smartling_api.new({
         smartling_api_key: '12345-abcde', smartling_project_id: 'abc'
       })
 
