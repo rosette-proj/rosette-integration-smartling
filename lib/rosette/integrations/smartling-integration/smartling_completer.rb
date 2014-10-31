@@ -2,7 +2,7 @@
 
 module Rosette
   module Integrations
-    module Smartling
+    class SmartlingIntegration < Integration
       class SmartlingCompleter
 
         attr_reader :configuration, :smartling_api
@@ -12,7 +12,7 @@ module Rosette
           @configuration = configuration
         end
 
-        def complete(locales)
+        def complete(locales, repo_name)
           file_hash ||= Hash.new { |h, key| h[key] = [] }
           file_uris_to_files = {}
 
@@ -21,10 +21,12 @@ module Rosette
             file_list = SmartlingFileList.from_api_response(file_list_response)
 
             file_list.each do |file|
-              file_uris_to_files[file.file_uri] ||= file
+              if file.repo_name == repo_name
+                file_uris_to_files[file.file_uri] ||= file
 
-              if file.phrase_count == file.translated_count
-                file_hash[file.file_uri] << locale
+                if file.phrase_count == file.translated_count
+                  file_hash[file.file_uri] << locale
+                end
               end
             end
           end

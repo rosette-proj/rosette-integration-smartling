@@ -2,7 +2,7 @@
 
 module Rosette
   module Integrations
-    module Smartling
+    class SmartlingIntegration < Integration
       module Errors
 
         class AmbiguousEncodingError < StandardError; end

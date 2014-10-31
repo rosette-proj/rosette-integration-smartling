@@ -2,6 +2,6 @@
 
 module Rosette
   module Integrations
-    SMARTLING_VERSION = '1.0.0'
+    SMARTLING_INTEGRATION_VERSION = '1.0.0'
   end
 end

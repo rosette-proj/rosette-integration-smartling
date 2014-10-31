@@ -2,7 +2,7 @@
 
 module Rosette
   module Integrations
-    module Smartling
+    class SmartlingIntegration < Integration
       class SmartlingFileList
 
         include Enumerable

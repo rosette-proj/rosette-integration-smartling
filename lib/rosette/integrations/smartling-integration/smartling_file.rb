@@ -2,7 +2,7 @@
 
 module Rosette
   module Integrations
-    module Smartling
+    class SmartlingIntegration < Integration
       class SmartlingFile
 
         attr_reader :repo_name, :commit_id, :phrase_count, :translated_count, :file_uri

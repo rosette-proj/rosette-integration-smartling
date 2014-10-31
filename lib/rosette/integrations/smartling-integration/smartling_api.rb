@@ -2,7 +2,7 @@
 
 module Rosette
   module Integrations
-    module Smartling
+    class SmartlingIntegration < Integration
 
       # wrapper around the smartling api that takes additional options
       class SmartlingApi
@@ -23,12 +23,10 @@ module Rosette
         alias :preapprove_translations? :preapprove_translations
         alias :use_sandbox? :use_sandbox
 
-        def initialize(base_api = nil, api_options = {})
+        def initialize(api_options = {})
           api_options.keys.each do |key|
             instance_variable_set("@#{key}", api_options[key])
           end
-
-          @api = base_api
         end
 
         def api

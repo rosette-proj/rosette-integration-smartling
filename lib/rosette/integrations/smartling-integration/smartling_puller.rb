@@ -2,7 +2,7 @@
 
 module Rosette
   module Integrations
-    module Smartling
+    class SmartlingIntegration < Integration
       class SmartlingPuller
 
         attr_reader :configuration, :smartling_api
