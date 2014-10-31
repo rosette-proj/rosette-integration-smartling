@@ -2,10 +2,10 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations::Smartling
+include Rosette::Integrations
 
-describe SmartlingFileList do
-  let(:file_list) { SmartlingFileList }
+describe SmartlingIntegration::SmartlingFileList do
+  let(:file_list) { SmartlingIntegration::SmartlingFileList }
 
   describe 'self#from_api_response' do
     it 'creates a file list from the hash of files returned from the smartling api' do

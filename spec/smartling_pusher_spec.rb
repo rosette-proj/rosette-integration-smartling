@@ -2,10 +2,10 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations::Smartling
+include Rosette::Integrations
 include Rosette::DataStores
 
-describe SmartlingPusher do
+describe SmartlingIntegration::SmartlingPusher do
   let(:repo_name) { 'test_repo' }
   let(:repo) { TmpRepo.new }
 
@@ -18,10 +18,10 @@ describe SmartlingPusher do
     end
   end
 
-  let(:pusher) { SmartlingPusher.new(configuration, repo_name, smartling_api) }
+  let(:pusher) { SmartlingIntegration::SmartlingPusher.new(configuration, repo_name, smartling_api) }
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
   let(:smartling_api_base) { double(:smartling_api) }
-  let(:smartling_api) { SmartlingApi.new(smartling_api_base) }
+  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new(smartling_api_base) }
   let(:serializer) { 'yaml/rails' }
 
   def add_file_to_repo

@@ -2,10 +2,10 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations::Smartling
+include Rosette::Integrations
 include Rosette::DataStores
 
-describe SmartlingCompleter do
+describe SmartlingIntegration::SmartlingCompleter do
   let(:repo_name) { 'test_repo' }
   let(:repo) { TmpRepo.new }
 
@@ -18,10 +18,13 @@ describe SmartlingCompleter do
     end
   end
 
-  let(:completer) { SmartlingCompleter.new(configuration, smartling_api) }
+  let(:completer) do
+    SmartlingIntegration::SmartlingCompleter.new(configuration, smartling_api)
+  end
+
   let(:locales) { ['ko-KR', 'ja-JP'] }
   let(:smartling_api_base) { double(:smartling_api) }
-  let(:smartling_api) { SmartlingApi.new(smartling_api_base) }
+  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new(smartling_api_base) }
   let(:incomplete_files) { [create_file_entry] }
   let(:complete_files) do
     3.times.map do
@@ -46,7 +49,7 @@ describe SmartlingCompleter do
 
       completer.complete(locales)
 
-      SmartlingFileList.from_api_response(create_file_list(complete_files)).each do |file|
+      SmartlingIntegration::SmartlingFileList.from_api_response(create_file_list(complete_files)).each do |file|
         commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
           file.commit_id == entry.commit_id && entry.repo_name
         end
@@ -54,7 +57,7 @@ describe SmartlingCompleter do
         expect(commit_log_entry.status).to eq('TRANSLATED')
       end
 
-      SmartlingFileList.from_api_response(create_file_list(incomplete_files)).each do |file|
+      SmartlingIntegration::SmartlingFileList.from_api_response(create_file_list(incomplete_files)).each do |file|
         commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
           file.commit_id == entry.commit_id && entry.repo_name
         end

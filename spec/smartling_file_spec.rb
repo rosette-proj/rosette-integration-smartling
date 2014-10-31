@@ -2,10 +2,10 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations::Smartling
+include Rosette::Integrations
 
-describe SmartlingFile do
-  let(:smartling_file) { SmartlingFile }
+describe SmartlingIntegration::SmartlingFile do
+  let(:smartling_file) { SmartlingIntegration::SmartlingFile }
 
   describe 'self#from_api_response' do
     it 'extracts the repo name and commit id from the api response hash' do

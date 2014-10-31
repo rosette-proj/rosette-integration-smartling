@@ -1,9 +1,9 @@
 $:.unshift File.join(File.dirname(__FILE__), 'lib')
-require 'rosette/integrations/smartling/version'
+require 'rosette/integrations/smartling-integration/version'
 
 Gem::Specification.new do |s|
   s.name     = "rosette-integration-smartling"
-  s.version  = ::Rosette::Integrations::SMARTLING_VERSION
+  s.version  = ::Rosette::Integrations::SMARTLING_INTEGRATION_VERSION
   s.authors  = ["Cameron Dutro"]
   s.email    = ["camertron@gmail.com"]
   s.homepage = "http://github.com/camertron"

@@ -2,11 +2,10 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations::Smartling::Errors
-include Rosette::Integrations::Smartling
+include Rosette::Integrations
 include Rosette::DataStores
 
-describe SmartlingPuller do
+describe SmartlingIntegration::SmartlingPuller do
   let(:repo_name) { 'test_repo' }
   let(:author) { 'KathrynJaneway' }
   let(:locale) { 'ko-KR' }
@@ -21,9 +20,9 @@ describe SmartlingPuller do
     end
   end
 
-  let(:puller) { SmartlingPuller.new(configuration, smartling_api) }
+  let(:puller) { SmartlingIntegration::SmartlingPuller.new(configuration, smartling_api) }
   let(:smartling_api_base) { double(:smartling_api) }
-  let(:smartling_api) { SmartlingApi.new(smartling_api_base) }
+  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new(smartling_api_base) }
   let(:rosette_api) { double(:rosette_api) }
   let(:extractor_id) { 'yaml/rails' }
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
@@ -111,7 +110,7 @@ describe SmartlingPuller do
       )
 
       expect { puller.pull(locale, extractor_id, rosette_api) }.to(
-        raise_error(AmbiguousEncodingError)
+        raise_error(SmartlingIntegration::Errors::AmbiguousEncodingError)
       )
     end
 
