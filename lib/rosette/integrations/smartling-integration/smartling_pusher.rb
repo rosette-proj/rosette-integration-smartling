@@ -18,10 +18,11 @@ module Rosette
               response = smartling_api.upload(
                 tmp_file.path, destination, 'YAML', approved: smartling_api.preapprove_translations?
               )
+
               phrase_count = response['stringCount']
 
               configuration.datastore.add_or_update_commit_log(
-                repo_name, commit_id, Rosette::DataStores::PhraseStatus::PENDING, phrase_count
+                repo_name, commit_id, nil, Rosette::DataStores::PhraseStatus::PENDING, phrase_count
               )
             end
           end
