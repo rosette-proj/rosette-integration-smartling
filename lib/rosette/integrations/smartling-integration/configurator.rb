@@ -5,7 +5,7 @@ module Rosette
     class SmartlingIntegration < Integration
 
       class Configurator
-        attr_reader :api_options, :serializer_id
+        attr_reader :api_options, :serializer_id, :directives
 
         def initialize
           @api_options = {}
@@ -14,6 +14,10 @@ module Rosette
 
         def set_api_options(options)
           @api_options = options
+        end
+
+        def set_directives(directives)
+          @directives = directives
         end
 
         def set_serializer(serializer_id)

@@ -1,14 +1,15 @@
 # encoding: UTF-8
-
+require 'pry'
 module Rosette
   module Integrations
     class SmartlingIntegration < Integration
       class SmartlingPusher
-        attr_reader :configuration, :repo_name, :smartling_api
+        attr_reader :rosette_config, :integration_config, :repo_name, :smartling_api
 
-        def initialize(configuration, repo_name, smartling_api)
+        def initialize(rosette_config, integration_config, repo_name, smartling_api)
           @smartling_api = smartling_api
-          @configuration = configuration
+          @integration_config = integration_config
+          @rosette_config = rosette_config
           @repo_name = repo_name
         end
 
@@ -20,8 +21,8 @@ module Rosette
               )
               phrase_count = response['stringCount']
 
-              configuration.datastore.add_or_update_commit_log(
-                repo_name, commit_id, Rosette::DataStores::PhraseStatus::PENDING, phrase_count
+              rosette_config.datastore.add_or_update_commit_log(
+                repo_name, commit_id, nil, Rosette::DataStores::PhraseStatus::PENDING, phrase_count
               )
             end
           end
@@ -34,7 +35,7 @@ module Rosette
         private
 
         def destination_filenames(commit_id)
-          repo = configuration.get_repo(repo_name).repo
+          repo = rosette_config.get_repo(repo_name).repo
           rev_commit = repo.get_rev_commit(commit_id)
 
           [File.join(repo_name, get_identity_string(rev_commit), "#{commit_id}.yml")]
@@ -44,10 +45,12 @@ module Rosette
         # we might not have meta_keys anymore (this method assumes we do)
         def file_for_upload(commit_id, serializer_id)
           serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
-          phrases = configuration.datastore.phrases_by_commit(repo_name, commit_id)
+          phrases = rosette_config.datastore.phrases_by_commit(repo_name, commit_id)
 
           if phrases.size > 0
             Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
+              file.write(integration_config.directives + "\n")
+
               serializer = serializer_const.new(file)
 
               phrases.each do |phrase|

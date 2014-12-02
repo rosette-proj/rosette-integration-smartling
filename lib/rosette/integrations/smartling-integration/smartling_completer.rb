@@ -37,7 +37,7 @@ module Rosette
               file = file_uris_to_files[file_uri]
 
               configuration.datastore.add_or_update_commit_log(
-                file.repo_name, file.commit_id, Rosette::DataStores::PhraseStatus::TRANSLATED
+                file.repo_name, file.commit_id, nil, Rosette::DataStores::PhraseStatus::TRANSLATED
               )
 
               smartling_api.delete(file_uri)
