@@ -1,5 +1,5 @@
 # encoding: UTF-8
-require 'pry'
+
 module Rosette
   module Integrations
     class SmartlingIntegration < Integration
