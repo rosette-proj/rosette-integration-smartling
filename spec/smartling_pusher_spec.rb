@@ -9,7 +9,7 @@ describe SmartlingIntegration::SmartlingPusher do
   let(:repo_name) { 'test_repo' }
   let(:repo) { TmpRepo.new }
 
-  let(:configuration) do
+  let(:rosette_config) do
     Rosette.build_config do |config|
       config.use_datastore('in-memory')
       config.add_repo(repo_name) do |repo_config|
@@ -18,7 +18,14 @@ describe SmartlingIntegration::SmartlingPusher do
     end
   end
 
-  let(:pusher) { SmartlingIntegration::SmartlingPusher.new(configuration, repo_name, smartling_api) }
+  let(:directives) { '# bogus directives' }
+  let(:integration_config) do
+    SmartlingIntegration::Configurator.new.tap do |config|
+      config.set_directives(directives)
+    end
+  end
+
+  let(:pusher) { SmartlingIntegration::SmartlingPusher.new(rosette_config, integration_config, repo_name, smartling_api) }
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
   let(:smartling_api_base) { double(:smartling_api) }
   let(:smartling_api) { SmartlingIntegration::SmartlingApi.new }
@@ -30,7 +37,7 @@ describe SmartlingIntegration::SmartlingPusher do
 
   def add_file_to_repo
     repo.create_file('foo.txt') do |f|
-      f.write("foobar_key")
+      f.write("foobar_metakey: foobar_key\n")
     end
 
     repo.add_all
@@ -39,38 +46,35 @@ describe SmartlingIntegration::SmartlingPusher do
     InMemoryDataStore::Phrase.create(
       repo_name: repo_name,
       key: 'foobar_key',
-      meta_key: nil,
+      meta_key: 'foobar_metakey',
       commit_id: commit_id
     )
   end
 
-  context 'with a committed file' do
-    before(:each) do
-      add_file_to_repo
-    end
-
-    describe '#push' do
-      it 'uploads strings to smartling and updates the commit log' do
-        expect(smartling_api_base).to receive(:upload).and_return({ 'stringCount' => 1 })
-        pusher.push(commit_id, serializer)
-
-        log_entry = InMemoryDataStore::CommitLog.find do |entry|
-          entry.repo_name == repo_name &&
-            entry.commit_id == commit_id
-        end
-
-        expect(log_entry.status).to eq('PENDING')
-        expect(log_entry.phrase_count).to eq(1)
-      end
-
-      it '(re)raises errors on smartling api error' do
-        expect(smartling_api_base).to receive(:upload).and_raise('Jelly beans')
-        expect { pusher.push(commit_id, serializer) }.to raise_error('Jelly beans')
-      end
-    end
-  end
 
   describe '#push' do
+    it 'uploads strings to smartling and updates the commit log' do
+      add_file_to_repo
+
+      expect(smartling_api_base).to receive(:upload).and_return({ 'stringCount' => 1 })
+      pusher.push(commit_id, serializer)
+
+      log_entry = InMemoryDataStore::CommitLog.find do |entry|
+        entry.repo_name == repo_name &&
+          entry.commit_id == commit_id
+      end
+
+      expect(log_entry.status).to eq('PENDING')
+      expect(log_entry.phrase_count).to eq(1)
+    end
+
+    it '(re)raises errors on smartling api error' do
+      add_file_to_repo
+
+      expect(smartling_api_base).to receive(:upload).and_raise('Jelly beans')
+      expect { pusher.push(commit_id, serializer) }.to raise_error('Jelly beans')
+    end
+
     it "uses the git author's name in the smartling file uri" do
       repo.git("config user.name 'Kathryn Janeway'")
       add_file_to_repo
@@ -106,6 +110,26 @@ describe SmartlingIntegration::SmartlingPusher do
         .and_return({ 'stringCount' => 1 })
 
       pusher.push(commit_id, serializer)
+    end
+  end
+
+  describe '#file_for_upload' do
+    it 'creates a file containing the smartling directives' do
+      add_file_to_repo
+
+      pusher.send(:file_for_upload, commit_id, serializer) do |file|
+        contents = File.read(file.path)
+        expect(contents[0...directives.length]).to eq(directives)
+      end
+    end
+
+    it 'creates a file containing the phrase' do
+      add_file_to_repo
+
+      pusher.send(:file_for_upload, commit_id, serializer) do |file|
+        contents = YAML.load_file(file.path)
+        expect(contents['foobar_metakey']).to eq('foobar_key')
+      end
     end
   end
 end
