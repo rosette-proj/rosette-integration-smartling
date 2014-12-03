@@ -51,7 +51,7 @@ module Rosette
             Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
               file.write(integration_config.directives + "\n")
 
-              serializer = serializer_const.new(file)
+              serializer = serializer_const.new(file, rosette_config.get_repo(repo_name).source_locale)
 
               phrases.each do |phrase|
                 serializer.write_key_value(phrase.index_value, phrase.key)
