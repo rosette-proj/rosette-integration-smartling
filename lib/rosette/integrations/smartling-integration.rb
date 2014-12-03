@@ -54,7 +54,7 @@ module Rosette
 
       def smartling_pusher(rosette_config, repo_name)
         smartling_pushers[repo_name] ||= SmartlingPusher.new(
-          rosette_config, config, repo_name, smartling_api
+          rosette_config, configuration, repo_name, smartling_api
         )
       end
 
