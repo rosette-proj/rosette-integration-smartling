@@ -18,7 +18,7 @@ module Rosette
 
           locales.each do |locale|
             file_list_response = smartling_api.list(locale: locale)
-            file_list = SmartlingFileList.from_api_response(file_list_response)
+            file_list = SmartlingFile.list_from_api_response(file_list_response)
 
             file_list.each do |file|
               if file.repo_name == repo_name
