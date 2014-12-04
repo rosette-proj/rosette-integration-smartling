@@ -25,6 +25,12 @@ module Rosette
           new(repo_name, commit_id, phrase_count, translated_count, file_uri)
         end
 
+        def self.list_from_api_response(response)
+          response['fileList'].map do |file|
+            from_api_response(file)
+          end
+        end
+
       end
     end
   end

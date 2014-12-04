@@ -14,7 +14,6 @@ module Rosette
       autoload :SmartlingCompleter, 'rosette/integrations/smartling-integration/smartling_completer'
 
       autoload :SmartlingFile,      'rosette/integrations/smartling-integration/smartling_file'
-      autoload :SmartlingFileList,  'rosette/integrations/smartling-integration/smartling_file_list'
 
       autoload :Configurator,       'rosette/integrations/smartling-integration/configurator'
 
