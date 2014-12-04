@@ -14,9 +14,11 @@ module Rosette
 
         def pull(locale, extractor_id, rosette_api, encoding = nil)
           file_list_response = smartling_api.list(locale: locale)
-          file_list = SmartlingFileList.from_api_response(file_list_response)
+          file_list = SmartlingFile.list_from_api_response(file_list_response)
 
           file_list.each do |file|
+            next unless repo_names.include?(file.repo_name)
+
             rosette_config.datastore.add_or_update_commit_log_locale(
               file.commit_id, locale, file.translated_count
             )
@@ -47,6 +49,12 @@ module Rosette
               end
             end
           end
+        end
+
+        private
+
+        def repo_names
+          @repo_names ||= rosette_config.repo_configs.map(&:name)
         end
 
       end
