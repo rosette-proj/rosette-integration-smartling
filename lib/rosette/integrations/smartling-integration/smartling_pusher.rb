@@ -45,8 +45,7 @@ module Rosette
         # we might not have meta_keys anymore (this method assumes we do)
         def file_for_upload(commit_id, serializer_id)
           serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
-          snapshot = take_snapshot(commit_id)
-          phrases = rosette_config.datastore.phrases_by_commits(repo_name, snapshot)
+          phrases = rosette_config.datastore.phrases_by_commit(repo_name, commit_id)
 
           if phrases.any?
             Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
@@ -83,13 +82,6 @@ module Rosette
             index = email.index('@') || 0
             email[0..index - 1].gsub(/[^\w]/, '')
           end
-        end
-
-        def take_snapshot(commit_id)
-          Rosette::Core::Commands::RepoSnapshotCommand.new(rosette_config)
-            .set_repo_name(repo_name)
-            .set_ref(commit_id)
-            .execute
         end
 
       end
