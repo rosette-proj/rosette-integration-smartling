@@ -5,10 +5,10 @@ module Rosette
     class SmartlingIntegration < Integration
       class SmartlingPuller
 
-        attr_reader :configuration, :smartling_api
+        attr_reader :rosette_config, :smartling_api
 
-        def initialize(configuration, smartling_api)
-          @configuration = configuration
+        def initialize(rosette_config, smartling_api)
+          @rosette_config = rosette_config
           @smartling_api = smartling_api
         end
 
@@ -17,11 +17,11 @@ module Rosette
           file_list = SmartlingFileList.from_api_response(file_list_response)
 
           file_list.each do |file|
-            configuration.datastore.add_or_update_commit_log_locale(
+            rosette_config.datastore.add_or_update_commit_log_locale(
               file.commit_id, locale, file.translated_count
             )
 
-            repo_config = configuration.get_repo(file.repo_name)
+            repo_config = rosette_config.get_repo(file.repo_name)
             encodings = repo_config.extractor_configs.map(&:encoding).uniq
 
             if encodings.size > 1 && !encoding
