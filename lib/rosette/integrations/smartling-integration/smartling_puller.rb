@@ -48,8 +48,7 @@ module Rosette
                     repo_name: repo_config.name
                   })
                 rescue Rosette::Client::ApiError => e
-                  # @TODO: log error with global rosette error reporter
-                  puts e.message
+                  rosette_config.error_reporter.report_error(e)
                 end
               end
             end
