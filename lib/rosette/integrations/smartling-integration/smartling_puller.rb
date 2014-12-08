@@ -39,13 +39,18 @@ module Rosette
               extractor = Rosette::Core::ExtractorId.resolve(extractor_id).new
 
               extractor.extract_each_from(file_contents) do |phrase_object|
-                rosette_api.add_or_update_translation({
-                  phrase_object.index_key => phrase_object.index_value,
-                  ref: file.commit_id,
-                  translation: phrase_object.key,
-                  locale: locale,
-                  repo_name: repo_config.name
-                })
+                begin
+                  rosette_api.add_or_update_translation({
+                    phrase_object.index_key => phrase_object.index_value,
+                    ref: file.commit_id,
+                    translation: phrase_object.key,
+                    locale: locale,
+                    repo_name: repo_config.name
+                  })
+                rescue Rosette::Client::ApiError => e
+                  # @TODO: log error with global rosette error reporter
+                  puts e.message
+                end
               end
             end
           end
