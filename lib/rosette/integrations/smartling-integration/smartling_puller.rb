@@ -48,7 +48,7 @@ module Rosette
                     repo_name: repo_config.name
                   })
                 rescue Rosette::Client::ApiError => e
-                  rosette_config.error_reporter.report_warning(e)
+                  rosette_config.error_reporter.report_warning(e, commit_id: file.commit_id, locale: locale)
                 end
               end
             end
