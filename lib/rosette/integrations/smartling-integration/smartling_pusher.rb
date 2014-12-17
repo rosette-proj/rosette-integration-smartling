@@ -4,6 +4,13 @@ module Rosette
   module Integrations
     class SmartlingIntegration < Integration
       class SmartlingPusher
+        FILE_TYPES =
+          %w(android ios gettext html javaProperties yaml xliff xml json docx pptx xlsx idml qt resx plaintext)
+
+        SERIALIZER_FILE_TYPE_MAP = {
+          'xml/android' => 'android'
+        }
+
         attr_reader :rosette_config, :integration_config, :repo_name, :smartling_api
 
         def initialize(rosette_config, integration_config, repo_name, smartling_api)
@@ -14,10 +21,15 @@ module Rosette
         end
 
         def push(commit_id, serializer_id)
-          destination_filenames(commit_id).map do |destination|
-            file_for_upload(commit_id, serializer_id) do |tmp_file|
+          serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
+          destination_filenames(commit_id, serializer_const).map do |destination|
+            file_for_upload(commit_id, serializer_const) do |tmp_file|
               response = smartling_api.upload(
-                tmp_file.path, destination, 'YAML', approved: smartling_api.preapprove_translations?
+                tmp_file.path,
+                destination,
+                file_type_for(serializer_id), {
+                  approved: smartling_api.preapprove_translations?
+                }
               )
               phrase_count = response['stringCount']
 
@@ -34,24 +46,43 @@ module Rosette
 
         private
 
-        def destination_filenames(commit_id)
+        # For serializer ids like yaml/rails and json/key-value, the
+        # file type can be inferred from the first half (i.e. 'yaml'
+        # and 'json'). For ambiguous file types like android xml, we
+        # make use of SERIALIZER_FILE_TYPE_MAP which directly maps
+        # serializer ids to file types.
+        def file_type_for(serializer_id)
+          if type = SERIALIZER_FILE_TYPE_MAP[serializer_id]
+            type
+          else
+            id_parts = Rosette::Core::SerializerId.parse_id(serializer_id)
+            id_parts.find do |id_part|
+              FILE_TYPES.include?(id_part)
+            end
+          end
+        end
+
+        def destination_filenames(commit_id, serializer_const)
           repo = rosette_config.get_repo(repo_name).repo
           rev_commit = repo.get_rev_commit(commit_id)
 
-          [File.join(repo_name, get_identity_string(rev_commit), "#{commit_id}.yml")]
+          Array(
+            File.join(
+              repo_name, get_identity_string(rev_commit),
+              "#{commit_id}#{serializer_const.default_extension}"
+            )
+          )
         end
 
         # @TODO: this will need to change if we inline phrases because
         # we might not have meta_keys anymore (this method assumes we do)
-        def file_for_upload(commit_id, serializer_id)
-          serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
+        def file_for_upload(commit_id, serializer_const)
           phrases = rosette_config.datastore.phrases_by_commit(repo_name, commit_id)
 
           if phrases.any?
             Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
-              file.write(integration_config.directives + "\n")
-
               serializer = serializer_const.new(file, rosette_config.get_repo(repo_name).source_locale)
+              serializer.write_raw(integration_config.directives + "\n")
 
               phrases.each do |phrase|
                 serializer.write_key_value(phrase.index_value, phrase.key)
