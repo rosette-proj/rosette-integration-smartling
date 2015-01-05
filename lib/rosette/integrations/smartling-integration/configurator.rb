@@ -10,6 +10,7 @@ module Rosette
         def initialize
           @api_options = {}
           @serializer_id = :serializer_not_configured
+          @directives = ''
         end
 
         def set_api_options(options)
