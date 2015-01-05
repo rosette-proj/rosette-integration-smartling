@@ -12,7 +12,7 @@ module Rosette
           @smartling_api = smartling_api
         end
 
-        def pull(locale, extractor_id, rosette_api, encoding = nil)
+        def pull(locale, extractor_id, encoding = nil)
           file_list_response = smartling_api.list(locale: locale)
           file_list = SmartlingFile.list_from_api_response(file_list_response)
 
