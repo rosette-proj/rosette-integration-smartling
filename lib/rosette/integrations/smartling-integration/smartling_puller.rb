@@ -40,14 +40,14 @@ module Rosette
 
               extractor.extract_each_from(file_contents) do |phrase_object|
                 begin
-                  rosette_api.add_or_update_translation({
-                    phrase_object.index_key => phrase_object.index_value,
-                    ref: file.commit_id,
-                    translation: phrase_object.key,
-                    locale: locale,
-                    repo_name: repo_config.name
-                  })
-                rescue Rosette::Client::ApiError => e
+                  Rosette::Core::Commands::AddOrUpdateTranslationCommand.new(rosette_config)
+                    .set_repo_name(repo_config.name)
+                    .set_locale(locale)
+                    .set_translation(phrase_object.key)
+                    .set_ref(file.commit_id)
+                    .send("set_#{phrase_object.index_key}", phrase_object.index_value)
+                    .execute
+                rescue => e
                   rosette_config.error_reporter.report_warning(e, commit_id: file.commit_id, locale: locale)
                 end
               end
