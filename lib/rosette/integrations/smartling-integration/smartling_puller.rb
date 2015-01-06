@@ -17,6 +17,7 @@ module Rosette
           file_list = SmartlingFile.list_from_api_response(file_list_response)
 
           file_list.each do |file|
+            next unless file.commit_id == 'aa9d4ce46afce3cd8c539cc55187715b1149b075'
             next unless repo_names.include?(file.repo_name)
 
             rosette_config.datastore.add_or_update_commit_log_locale(
@@ -39,14 +40,16 @@ module Rosette
               extractor = Rosette::Core::ExtractorId.resolve(extractor_id).new
 
               extractor.extract_each_from(file_contents) do |phrase_object|
+                puts phrase_object.index_value
                 begin
-                  Rosette::Core::Commands::AddOrUpdateTranslationCommand.new(rosette_config)
+                  cmd = Rosette::Core::Commands::AddOrUpdateTranslationCommand.new(rosette_config)
                     .set_repo_name(repo_config.name)
                     .set_locale(locale)
                     .set_translation(phrase_object.key)
                     .set_ref(file.commit_id)
                     .send("set_#{phrase_object.index_key}", phrase_object.index_value)
-                    .execute
+
+                  cmd.execute
                 rescue => e
                   rosette_config.error_reporter.report_warning(e, commit_id: file.commit_id, locale: locale)
                 end
