@@ -31,8 +31,6 @@ module Rosette
                   approved: smartling_api.preapprove_translations?
                 }
               )
-              Rosette.logger.info("Smartling api: #{smartling_api.inspect}")
-              Rosette.logger.info("Push response: #{response.inspect}")
               phrase_count = response['stringCount']
 
               rosette_config.datastore.add_or_update_commit_log(
