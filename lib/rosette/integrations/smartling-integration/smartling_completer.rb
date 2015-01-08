@@ -5,29 +5,24 @@ module Rosette
     class SmartlingIntegration < Integration
       class SmartlingCompleter
 
-        attr_reader :configuration, :smartling_api
+        attr_reader :configuration, :smartling_api, :pullers
 
-        def initialize(configuration, smartling_api)
+        def initialize(configuration, smartling_api, pullers)
           @smartling_api = smartling_api
           @configuration = configuration
+          @pullers = pullers
         end
 
-        def complete(locales, repo_name)
+        def complete(repo_name, locales)
           file_hash ||= Hash.new { |h, key| h[key] = [] }
           file_uris_to_files = {}
 
           locales.each do |locale|
-            file_list_response = smartling_api.list(locale: locale)
-            file_list = SmartlingFile.list_from_api_response(file_list_response)
-
-            file_list.each do |file|
-              if file.repo_name == repo_name
-                file_uris_to_files[file.file_uri] ||= file
-
-                if file.phrase_count == file.translated_count
-                  file_hash[file.file_uri] << locale
-                end
-              end
+            puller = puller_for_locale(locale)
+            completed_files = puller.completed_files_map[repo_name]
+            completed_files.each do |file|
+              file_uris_to_files[file.file_uri] ||= file
+              file_hash[file.file_uri] << locale
             end
           end
 
@@ -43,6 +38,12 @@ module Rosette
               smartling_api.delete(file_uri)
             end
           end
+        end
+
+        private
+
+        def puller_for_locale(locale)
+          pullers.find { |puller| puller.locale == locale }
         end
 
       end
