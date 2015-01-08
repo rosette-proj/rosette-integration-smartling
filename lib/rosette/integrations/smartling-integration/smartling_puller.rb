@@ -5,19 +5,19 @@ module Rosette
     class SmartlingIntegration < Integration
       class SmartlingPuller
 
-        attr_reader :rosette_config, :smartling_api
+        attr_reader :rosette_config, :smartling_api, :completed_files_map, :locale
 
-        def initialize(rosette_config, smartling_api)
+        def initialize(rosette_config, smartling_api, locale)
           @rosette_config = rosette_config
           @smartling_api = smartling_api
+          @locale = locale
+          @completed_files_map = Hash.new { |h, key| h[key] = [] }
         end
 
-        def pull(locale, extractor_id)
-          file_list_response = smartling_api.list(locale: locale)
-          file_list = SmartlingFile.list_from_api_response(file_list_response)
+        def pull(repo_name, extractor_id)
 
           file_list.each do |file|
-            next unless repo_names.include?(file.repo_name)
+            next unless file.repo_name == repo_name
 
             rosette_config.datastore.add_or_update_commit_log_locale(
               file.commit_id, locale, file.translated_count
@@ -49,13 +49,17 @@ module Rosette
               end
             end
 
+            @completed_files_map[repo_name] << file if file.complete?
           end
         end
 
         private
 
-        def repo_names
-          @repo_names ||= rosette_config.repo_configs.map(&:name)
+        def file_list
+          @file_list ||= begin
+            file_list_response = smartling_api.list(locale: locale)
+            SmartlingFile.list_from_api_response(file_list_response)
+          end
         end
 
       end

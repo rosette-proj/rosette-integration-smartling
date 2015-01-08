@@ -31,6 +31,10 @@ module Rosette
           end
         end
 
+        def complete?
+          phrase_count == translated_count
+        end
+
       end
     end
   end
