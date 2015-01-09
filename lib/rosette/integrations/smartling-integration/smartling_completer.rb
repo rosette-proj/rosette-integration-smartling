@@ -5,10 +5,10 @@ module Rosette
     class SmartlingIntegration < Integration
       class SmartlingCompleter
 
-        attr_reader :configuration, :smartling_api, :pullers
+        attr_reader :configuration, :smartling_apis, :pullers
 
-        def initialize(configuration, smartling_api, pullers)
-          @smartling_api = smartling_api
+        def initialize(configuration, smartling_apis, pullers)
+          @smartling_apis = smartling_apis
           @configuration = configuration
           @pullers = pullers
         end
@@ -35,7 +35,7 @@ module Rosette
                 file.repo_name, file.commit_id, nil, Rosette::DataStores::PhraseStatus::TRANSLATED
               )
 
-              smartling_api.delete(file_uri)
+              smartling_apis[repo_name].delete(file_uri)
             end
           end
         end
