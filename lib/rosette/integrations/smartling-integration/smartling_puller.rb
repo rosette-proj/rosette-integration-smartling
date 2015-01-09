@@ -22,6 +22,17 @@ module Rosette
               file.commit_id, locale, file.translated_count
             )
 
+            # Update the phrase count to avoid discrepancies between this and
+            # the initial number reported when the file is pushed (uploaded).
+            # For some reason these numbers can differ, meaning the file is
+            # either over-translated (more translations than phrases) or
+            # under-translated (less translations than phrases), even though
+            # the Smartling UI reports 100% for all locales.
+            rosette_config.datastore.add_or_update_commit_log(
+              repo_name, file.commit_id, nil, Rosette::DataStores::PhraseStatus::PENDING,
+              file.phrase_count
+            )
+
             repo_config = rosette_config.get_repo(file.repo_name)
             extractor_config = repo_config.get_extractor_config(extractor_id)
 
