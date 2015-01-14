@@ -20,7 +20,7 @@ module Rosette
         def self.from_api_response(response)
           file_uri = response['fileUri']
           repo_name, author, commit_id, file = file_uri.split('/')
-          file = decode_path(file.chomp(File.extname(file)))
+          file = decode_path(file.chomp(File.extname(file))) if file
           phrase_count = response['stringCount']
           translated_count = response['completedStringCount']
 
