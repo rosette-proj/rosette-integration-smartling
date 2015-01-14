@@ -30,6 +30,14 @@ module Rosette
           )
         end
 
+        def self.encode_path(path)
+          path.gsub('/', '$')
+        end
+
+        def self.decode_path(path)
+          path.gsub('$', '/')
+        end
+
         def self.list_from_api_response(response)
           response['fileList'].map do |file|
             from_api_response(file)

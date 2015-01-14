@@ -84,7 +84,7 @@ module Rosette
               repo_name,
               get_identity_string(rev_commit),
               commit_id,
-              "#{sanitize_path(file)}#{serializer_const.default_extension}"
+              "#{encode_path(file)}#{serializer_const.default_extension}"
             )
           end
         end
@@ -128,8 +128,8 @@ module Rosette
           end
         end
 
-        def sanitize_path(path)
-          path.gsub('/', '$')
+        def encode_path(path)
+          SmartlingFile.encode_path(path)
         end
 
       end
