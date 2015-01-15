@@ -5,13 +5,12 @@ module Rosette
     class SmartlingIntegration < Integration
       class SmartlingFile
 
-        attr_reader :repo_name, :commit_id, :file
+        attr_reader :repo_name, :commit_id
         attr_reader :phrase_count, :translated_count, :file_uri
 
-        def initialize(repo_name, commit_id, file, phrase_count, translated_count, file_uri)
+        def initialize(repo_name, commit_id, phrase_count, translated_count, file_uri)
           @repo_name = repo_name
           @commit_id = commit_id
-          @file = file
           @phrase_count = phrase_count
           @translated_count = translated_count
           @file_uri = file_uri
@@ -19,23 +18,15 @@ module Rosette
 
         def self.from_api_response(response)
           file_uri = response['fileUri']
-          repo_name, author, commit_id, file = file_uri.split('/')
-          file = decode_path(file.chomp(File.extname(file))) if file
+          repo_name, author, commit_id = file_uri.split('/')
+          commit_id = file.chomp(File.extname(commit_id)) if commit_id
           phrase_count = response['stringCount']
           translated_count = response['completedStringCount']
 
           new(
-            repo_name, commit_id, file, phrase_count,
+            repo_name, commit_id, phrase_count,
             translated_count, file_uri
           )
-        end
-
-        def self.encode_path(path)
-          path.gsub('/', '$')
-        end
-
-        def self.decode_path(path)
-          path.gsub('$', '/')
         end
 
         def self.list_from_api_response(response)

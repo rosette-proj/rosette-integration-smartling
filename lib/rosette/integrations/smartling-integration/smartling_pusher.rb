@@ -21,13 +21,13 @@ module Rosette
         end
 
         def push(commit_id, serializer_id)
-          phrases_by_file = phrases_by_file_for(commit_id)
+          phrases = phrases_for(commit_id)
           serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
 
           phrases_by_file.each_pair do |file, phrases_for_file|
-            dest_filename = destination_filename_for(file, phrases_for_file, serializer_const)
+            dest_filename = destination_filename_for(commit_id, serializer_const)
 
-            file_for_upload(phrases_for_file, serializer_const) do |tmp_file|
+            file_for_upload(phrases, serializer_const) do |tmp_file|
               response = smartling_api.upload(
                 tmp_file.path,
                 dest_filename,
@@ -50,12 +50,11 @@ module Rosette
 
         private
 
-        def phrases_by_file_for(commit_id)
+        def phrases_for(commit_id)
           Rosette::Core::Commands::SnapshotCommand.new(rosette_config)
             .set_repo_name(repo_name)
             .set_commit_id(commit_id)
             .execute
-            .group_by(&:file)
         end
 
         # For serializer ids like yaml/rails and json/key-value, the
@@ -74,19 +73,15 @@ module Rosette
           end
         end
 
-        def destination_filename_for(file, phrases_for_file, serializer_const)
-          unless phrases_for_file.empty?
-            repo = rosette_config.get_repo(repo_name).repo
-            commit_id = phrases_for_file.first.commit_id
-            rev_commit = repo.get_rev_commit(commit_id)
+        def destination_filename_for(commit_id, serializer_const)
+          repo = rosette_config.get_repo(repo_name).repo
+          rev_commit = repo.get_rev_commit(commit_id)
 
-            File.join(
-              repo_name,
-              get_identity_string(rev_commit),
-              commit_id,
-              "#{encode_path(file)}#{serializer_const.default_extension}"
-            )
-          end
+          File.join(
+            repo_name,
+            get_identity_string(rev_commit),
+            "#{commit_id}#{serializer_const.default_extension}"
+          )
         end
 
         # @TODO: this will need to change if we inline phrases because
