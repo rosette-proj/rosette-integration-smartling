@@ -18,6 +18,11 @@ module Rosette
           file_list_for_repo(repo_name).each do |file|
             next unless file.repo_name == repo_name
 
+            snapshot = Rosette::Core::Commands::RepoSnapshotCommand.new(rosette_config)
+              .set_repo_name(repo_name)
+              .set_commit_id(file.commit_id)
+              .execute
+
             rosette_config.datastore.add_or_update_commit_log_locale(
               file.commit_id, locale, file.translated_count
             )
@@ -48,7 +53,7 @@ module Rosette
                   .set_repo_name(repo_config.name)
                   .set_locale(locale)
                   .set_translation(phrase_object.key)
-                  .set_ref(file.commit_id)
+                  .set_refs(snapshot.values)
                   .send("set_#{phrase_object.index_key}", phrase_object.index_value)
                   .execute
               rescue => e
