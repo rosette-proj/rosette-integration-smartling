@@ -23,24 +23,21 @@ module Rosette
         def push(commit_id, serializer_id)
           phrases = phrases_for(commit_id)
           serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
+          dest_filename = destination_filename_for(commit_id, serializer_const)
 
-          phrases_by_file.each_pair do |file, phrases_for_file|
-            dest_filename = destination_filename_for(commit_id, serializer_const)
+          file_for_upload(phrases, serializer_const) do |tmp_file|
+            response = smartling_api.upload(
+              tmp_file.path,
+              dest_filename,
+              file_type_for(serializer_id), {
+                approved: smartling_api.preapprove_translations?
+              }
+            )
 
-            file_for_upload(phrases, serializer_const) do |tmp_file|
-              response = smartling_api.upload(
-                tmp_file.path,
-                dest_filename,
-                file_type_for(serializer_id), {
-                  approved: smartling_api.preapprove_translations?
-                }
-              )
-
-              phrase_count = response['stringCount']
-              rosette_config.datastore.add_or_update_commit_log(
-                repo_name, commit_id, nil, Rosette::DataStores::PhraseStatus::PENDING, phrase_count
-              )
-            end
+            phrase_count = response['stringCount']
+            rosette_config.datastore.add_or_update_commit_log(
+              repo_name, commit_id, nil, Rosette::DataStores::PhraseStatus::PENDING, phrase_count
+            )
           end
         rescue => ex
           Rosette.logger.error('Caught an exception while pushing to Smartling API.')
