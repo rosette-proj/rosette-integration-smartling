@@ -18,10 +18,15 @@ module Rosette
           file_list_for_repo(repo_name).each do |file|
             next unless file.repo_name == repo_name
 
+            potential_files = rosette_config.datastore.file_list_for_repo(repo_name)
+
             snapshot = Rosette::Core::Commands::RepoSnapshotCommand.new(rosette_config)
               .set_repo_name(repo_name)
               .set_commit_id(file.commit_id)
+              .set_paths(potential_files)
               .execute
+
+            snapshot_commit_ids = snapshot.values.uniq.compact
 
             rosette_config.datastore.add_or_update_commit_log_locale(
               file.commit_id, locale, file.translated_count
@@ -40,12 +45,11 @@ module Rosette
 
             repo_config = rosette_config.get_repo(file.repo_name)
             extractor_config = repo_config.get_extractor_config(extractor_id)
+            extractor = extractor_config.extractor
 
             file_contents = smartling_apis[repo_name].download(
               file.file_uri, locale: locale
             ).force_encoding(extractor_config.encoding)
-
-            extractor = extractor_config.extractor
 
             extractor.extract_each_from(file_contents) do |phrase_object|
               begin
@@ -53,10 +57,10 @@ module Rosette
                   .set_repo_name(repo_config.name)
                   .set_locale(locale)
                   .set_translation(phrase_object.key)
-                  .set_refs(snapshot.values)
+                  .set_refs(snapshot_commit_ids)
                   .send("set_#{phrase_object.index_key}", phrase_object.index_value)
                   .execute
-              rescue => e
+              rescue Rosette::DataStores::PhraseNotFoundError => e
                 rosette_config.error_reporter.report_warning(
                   e, commit_id: file.commit_id, locale: locale
                 )
