@@ -60,7 +60,7 @@ module Rosette
                   .set_refs(snapshot_commit_ids)
                   .send("set_#{phrase_object.index_key}", phrase_object.index_value)
                   .execute
-              rescue Rosette::DataStores::PhraseNotFoundError => e
+              rescue Rosette::DataStores::Errors::PhraseNotFoundError => e
                 rosette_config.error_reporter.report_warning(
                   e, commit_id: file.commit_id, locale: locale
                 )
