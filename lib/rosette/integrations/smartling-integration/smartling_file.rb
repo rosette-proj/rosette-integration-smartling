@@ -36,7 +36,7 @@ module Rosette
         end
 
         def complete?
-          phrase_count == translated_count
+          translated_count >= phrase_count
         end
 
       end
