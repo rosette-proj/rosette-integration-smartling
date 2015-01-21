@@ -15,7 +15,7 @@ module Rosette
         end
 
         def pull(repo_name, extractor_id)
-          file_list_for_repo(repo_name).each do |file|
+          each_file_for_repo(repo_name) do |file|
             next unless file.repo_name == repo_name
 
             potential_files = rosette_config.datastore.file_list_for_repo(repo_name)
@@ -73,11 +73,33 @@ module Rosette
 
         private
 
-        def file_list_for_repo(repo_name)
-          file_lists[repo_name] ||= begin
-            file_list_response = smartling_apis[repo_name].list(locale: locale)
-            SmartlingFile.list_from_api_response(file_list_response)
+        def each_file_for_repo(repo_name, &block)
+          if block_given?
+            if file_lists.include?(repo_name)
+              file_lists[repo_name].each(&block)
+            else
+              counter = 0
+              list = get_file_list(repo_name, counter)
+              file_lists[repo_name] = list
+
+              while list.size > 0
+                list.each(&block)
+                list = get_file_list(repo_name, counter + 1)
+                file_lists[repo_name] += list
+                counter += list.size + 1
+              end
+            end
+          else
+            to_enum(__method__, repo_name)
           end
+        end
+
+        def get_file_list(repo_name, offset, limit = 100)
+          SmartlingFile.list_from_api_response(
+            smartling_apis[repo_name].list(
+              locale: locale, offset: offset, limit: limit
+            )
+          )
         end
 
         def file_lists
