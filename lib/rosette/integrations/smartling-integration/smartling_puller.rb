@@ -17,6 +17,7 @@ module Rosette
         def pull(repo_name, extractor_id)
           each_file_for_repo(repo_name) do |file|
             next unless file.repo_name == repo_name
+            next unless file_has_changed?(repo_name, file)
 
             potential_files = rosette_config.datastore.file_list_for_repo(repo_name)
 
@@ -72,6 +73,22 @@ module Rosette
         end
 
         private
+
+        def file_has_changed?(repo_name, file)
+          status = rosette_config.datastore.commit_log_status(
+            repo_name, file.commit_id
+          )
+
+          if status
+            locale_status = status.fetch(:locales, []).find do |l|
+              l.fetch(:locale, nil) == locale
+            end
+
+            (locale_status || {}).fetch(:translated_count, nil) != file.translated_count
+          else
+            true
+          end
+        end
 
         def each_file_for_repo(repo_name, &block)
           if block_given?
