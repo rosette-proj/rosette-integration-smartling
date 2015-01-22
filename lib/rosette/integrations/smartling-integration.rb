@@ -2,7 +2,6 @@
 
 require 'smartling'
 require 'rosette/integrations'
-require 'rosette/integrations/smartling-integration/errors'
 
 module Rosette
   module Integrations
@@ -12,9 +11,7 @@ module Rosette
       autoload :SmartlingPusher,    'rosette/integrations/smartling-integration/smartling_puller'
       autoload :SmartlingPuller,    'rosette/integrations/smartling-integration/smartling_pusher'
       autoload :SmartlingCompleter, 'rosette/integrations/smartling-integration/smartling_completer'
-
       autoload :SmartlingFile,      'rosette/integrations/smartling-integration/smartling_file'
-
       autoload :Configurator,       'rosette/integrations/smartling-integration/configurator'
 
       def self.configure
