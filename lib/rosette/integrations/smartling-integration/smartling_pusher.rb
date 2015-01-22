@@ -23,9 +23,6 @@ module Rosette
         def push(commit_id, serializer_id)
           phrases = phrases_for(commit_id)
 
-          # don't upload if this commit contains no changes
-          return unless phrase.any? { |p| p.commit_id == commit_id }
-
           serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
           dest_filename = destination_filename_for(commit_id, serializer_const)
 
