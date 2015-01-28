@@ -8,7 +8,7 @@ module Rosette
         DEFAULT_MAX_RETRIES = 5
 
         def self.retry(options = {}, &block)
-          new(options.fetch(times, DEFAULT_MAX_RETRIES), block)
+          new(options.fetch(:times, DEFAULT_MAX_RETRIES), block)
         end
 
         attr_reader :max_retries, :errors, :proc
