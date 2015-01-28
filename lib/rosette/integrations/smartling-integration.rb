@@ -12,6 +12,7 @@ module Rosette
       autoload :SmartlingPuller,    'rosette/integrations/smartling-integration/smartling_pusher'
       autoload :SmartlingCompleter, 'rosette/integrations/smartling-integration/smartling_completer'
       autoload :SmartlingFile,      'rosette/integrations/smartling-integration/smartling_file'
+      autoload :Retrier,            'rosette/integrations/smartling-integration/retrier'
       autoload :Configurator,       'rosette/integrations/smartling-integration/configurator'
 
       def self.configure

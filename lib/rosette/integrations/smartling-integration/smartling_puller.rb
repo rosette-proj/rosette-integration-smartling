@@ -48,9 +48,8 @@ module Rosette
             extractor_config = repo_config.get_extractor_config(extractor_id)
             extractor = extractor_config.extractor
 
-            file_contents = smartling_apis[repo_name].download(
-              file.file_uri, locale: locale
-            ).force_encoding(extractor_config.encoding)
+            file_contents = download_file(file, locale)
+              .force_encoding(extractor_config.encoding)
 
             extractor.extract_each_from(file_contents) do |phrase_object|
               begin
@@ -112,11 +111,21 @@ module Rosette
         end
 
         def get_file_list(repo_name, offset, limit = 100)
-          SmartlingFile.list_from_api_response(
-            smartling_apis[repo_name].list(
-              locale: locale, offset: offset, limit: limit
+          Retrier.retry(times: 5) do
+            SmartlingFile.list_from_api_response(
+              smartling_apis[repo_name].list(
+                locale: locale, offset: offset, limit: limit
+              )
             )
-          )
+          end.on_error(RestClient::RequestTimeout).execute
+        end
+
+        def download_file(file, locale)
+          Retrier.retry(times: 5) do
+            smartling_apis[file.repo_name].download(
+              file.file_uri, locale: locale
+            )
+          end.on_error(RestClient::RequestTimeout).execute
         end
 
         def file_lists
