@@ -31,7 +31,7 @@ module Rosette
           rescue *errors.keys => e
             retries += 1
             errors[e.class].call(e, retries) if errors[e.class]
-            retry unless retries > max_retries
+            retry unless retries >= max_retries
             raise e
           end
         end
