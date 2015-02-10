@@ -10,6 +10,7 @@ module Rosette
       autoload :SmartlingApi,       'rosette/integrations/smartling-integration/smartling_api'
       autoload :SmartlingPusher,    'rosette/integrations/smartling-integration/smartling_puller'
       autoload :SmartlingPuller,    'rosette/integrations/smartling-integration/smartling_pusher'
+      autoload :SmartlingUploader,  'rosette/integrations/smartling-integration/smartling_uploader'
       autoload :SmartlingCompleter, 'rosette/integrations/smartling-integration/smartling_completer'
       autoload :SmartlingFile,      'rosette/integrations/smartling-integration/smartling_file'
       autoload :Retrier,            'rosette/integrations/smartling-integration/retrier'

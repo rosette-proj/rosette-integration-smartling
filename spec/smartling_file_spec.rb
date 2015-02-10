@@ -30,4 +30,30 @@ describe SmartlingIntegration::SmartlingFile do
       end
     end
   end
+
+  describe 'self#list_from_api_response' do
+    it 'creates a file list from the hash of files returned from the smartling api' do
+      hash = create_file_list(3)
+      list = smartling_file.list_from_api_response(hash)
+      expect(list).to be_a(Array)
+      expect(list.size).to eq(hash['fileList'].size)
+    end
+  end
+
+  context 'with a file list' do
+    let(:list) do
+      smartling_file.list_from_api_response(create_file_list(3))
+    end
+
+    describe '#each' do
+      it 'yields each file in the list' do
+        index = 0
+
+        list.each do |item|
+          expect(list[index].commit_id).to eq(item.commit_id)
+          index += 1
+        end
+      end
+    end
+  end
 end

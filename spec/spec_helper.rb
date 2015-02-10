@@ -26,7 +26,7 @@ RSpec.configure do |config|
 
   def create_file_entry(options = {})
     {
-      'fileUri' => create_file_uri(
+      'fileUri' => options['fileUri'] || create_file_uri(
         options.fetch('repo_name', fake_string),
         options.fetch('author', "#{fake_string} #{fake_string}"),
         options.fetch('commit_id', fake_hex_string(38))
@@ -57,6 +57,7 @@ class NilLogger
   def info(msg); end
   def warn(msg); end
   def error(msg); end
+  def write(msg); end
 end
 
 Rosette.logger = NilLogger.new
