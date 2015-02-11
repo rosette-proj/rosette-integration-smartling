@@ -97,13 +97,11 @@ module Rosette
         end
 
         def serializer_const
-          @serializer_const ||=
-            Rosette::Core::SerializerId.resolve(serializer_id)
+          @serializer_const ||= Rosette::Core::SerializerId.resolve(serializer_id)
         end
 
         def integration_config
-          @integration_config ||=
-            repo_config.get_integration('smartling')
+          @integration_config ||= repo_config.get_integration('smartling')
         end
 
         def smartling_api
