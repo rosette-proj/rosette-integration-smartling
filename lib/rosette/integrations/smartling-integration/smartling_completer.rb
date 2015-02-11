@@ -35,11 +35,11 @@ module Rosette
         end
 
         def complete
-          build_completion_maps.each do |file_uri, locales|
-            if locales.all? { |_, v| v.complete? }
+          build_completion_maps.each do |file_uri, locales_map|
+            update_logs(locales_map)
+            if all_locales_are_complete?(locales_map)
               begin
-                file = locales[repo_config.locales.first.code]
-                complete_log(file)
+                file = locales_map[repo_config.locales.first.code]
                 delete_file(file)
               rescue => e
                 rosette_config.error_reporter.report_error(e)
@@ -56,10 +56,28 @@ module Rosette
           end.on_error(Exception).execute
         end
 
-        def complete_log(file)
+        def update_logs(locales_map)
+          locales_map.each_pair do |locale, file|
+            rosette_config.datastore.add_or_update_commit_log_locale(
+              file.commit_id, locale, file.translated_count
+            )
+          end
+
+          status = if all_locales_are_complete?(locales_map)
+            Rosette::DataStores::PhraseStatus::TRANSLATED
+          else
+            Rosette::DataStores::PhraseStatus::PENDING
+          end
+
+          file = locales_map[repo_config.locales.first.code]
+
           rosette_config.datastore.add_or_update_commit_log(
-            file.repo_name, file.commit_id, nil,Rosette::DataStores::PhraseStatus::TRANSLATED
+            file.repo_name, file.commit_id, nil, status
           )
+        end
+
+        def all_locales_are_complete?(locales_map)
+          locales_map.all? { |_, v| v.complete? }
         end
 
         def build_completion_maps
