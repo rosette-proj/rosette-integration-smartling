@@ -27,12 +27,12 @@ module Rosette
 
             response = uploader.upload
             phrase_count = response['stringCount']
-
-            rosette_config.datastore.add_or_update_commit_log(
-              repo_config.name, commit_id, nil,
-              Rosette::DataStores::PhraseStatus::PENDING, phrase_count
-            )
           end
+
+          rosette_config.datastore.add_or_update_commit_log(
+            repo_config.name, commit_id, nil,
+            Rosette::DataStores::PhraseStatus::PENDING, phrase_count
+          )
         rescue => ex
           rosette_config.error_reporter.report_error(ex)
         end
