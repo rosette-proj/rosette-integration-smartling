@@ -16,6 +16,7 @@ module Rosette
         def initialize(rosette_config)
           @rosette_config = rosette_config
           @thread_pool_size = DEFAULT_THREAD_POOL_SIZE
+          @logger = Rosette.logger
         end
 
         def set_repo_config(repo_config)
@@ -25,6 +26,11 @@ module Rosette
 
         def set_thread_pool_size(size)
           @thread_pool_size = size
+          self
+        end
+
+        def set_logger(logger)
+          @logger = logger
           self
         end
 
@@ -52,7 +58,7 @@ module Rosette
 
         def complete_log(file)
           rosette_config.datastore.add_or_update_commit_log(
-            file.repo_name, file.commit_id, nil, Rosette::DataStores::PhraseStatus::TRANSLATED
+            file.repo_name, file.commit_id, nil,Rosette::DataStores::PhraseStatus::TRANSLATED
           )
         end
 
@@ -100,7 +106,7 @@ module Rosette
             current_completed_count = pool.completed_task_count
 
             if current_completed_count > last_completed_count
-              puts "#{current_completed_count} of #{total} completed"
+              logger.info("#{current_completed_count} of #{total} completed")
             end
 
             last_completed_count = current_completed_count
