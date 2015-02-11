@@ -36,7 +36,7 @@ describe SmartlingIntegration::SmartlingPuller do
       .set_repo_config(repo_config)
       .set_serializer_id(serializer_id)
       .set_extractor_id(extractor_id)
-      .set_thread_pool_size(1)
+      .set_thread_pool_size(0)
   end
 
   before(:each) do

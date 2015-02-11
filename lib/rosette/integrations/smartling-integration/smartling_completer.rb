@@ -81,7 +81,7 @@ module Rosette
         end
 
         def build_completion_maps
-          if thread_pool_size > 1
+          if thread_pool_size > 0
             build_completion_maps_asynchronously
           else
             build_completion_maps_synchronously

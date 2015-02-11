@@ -25,7 +25,7 @@ describe SmartlingIntegration::SmartlingCompleter do
   let(:completer) do
     SmartlingIntegration::SmartlingCompleter.new(rosette_config)
       .set_repo_config(repo_config)
-      .set_thread_pool_size(1)
+      .set_thread_pool_size(0)
   end
 
   let(:repo_config) { rosette_config.get_repo(repo_name) }

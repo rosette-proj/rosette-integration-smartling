@@ -8,7 +8,7 @@ module Rosette
     class SmartlingIntegration < Integration
       class SmartlingPuller
 
-        DEFAULT_THREAD_POOL_SIZE = 15
+        DEFAULT_THREAD_POOL_SIZE = 10
 
         attr_reader :rosette_config
         attr_reader :repo_config, :serializer_id, :extractor_id
@@ -46,7 +46,7 @@ module Rosette
         end
 
         def pull
-          if thread_pool_size > 1
+          if thread_pool_size > 0
             pull_asynchronously
           else
             pull_synchronously
