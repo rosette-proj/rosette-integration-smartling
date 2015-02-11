@@ -96,7 +96,7 @@ describe SmartlingIntegration::SmartlingCompleter do
           file.commit_id == entry.commit_id && entry.repo_name
         end
 
-        expect(commit_log_entry).to be_nil
+        expect(commit_log_entry.status).to eq('PENDING')
       end
     end
   end

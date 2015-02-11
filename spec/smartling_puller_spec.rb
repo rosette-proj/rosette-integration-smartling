@@ -63,6 +63,12 @@ describe SmartlingIntegration::SmartlingPuller do
       file: 'foo.txt'
     )
 
+    InMemoryDataStore::CommitLog.create(
+      repo_name: repo_name,
+      commit_id: commit_id,
+      status: 'PENDING'
+    )
+
     integration_config.smartling_api.instance_variable_set(
       :'@api', smartling_api_base
     )
@@ -78,18 +84,6 @@ describe SmartlingIntegration::SmartlingPuller do
         receive(:download)
           .with(file_uri, locale: locale)
           .and_return("es-ES:\n  phrase: I'm in #{locale}\n")
-      )
-
-      expect(smartling_api_base).to(
-        receive(:status)
-          .with(file_uri, locale: locale)
-          .and_return(
-            create_file_entry(
-              'fileUri' => file_uri,
-              'stringCount' => 1,
-              'completedStringCount' => 1
-            )
-          )
       )
     end
 
