@@ -162,14 +162,6 @@ module Rosette
           end.on_error(Exception).execute
         end
 
-        def file_status_for(file_uri, locale)
-          Retrier.retry(times: 3) do
-            SmartlingFile.from_api_response(
-              smartling_api.status(file_uri, locale: locale.code)
-            )
-          end.on_error(Exception).execute
-        end
-
         def build_uploader(phrases, file_name)
           SmartlingIntegration::SmartlingUploader.new(rosette_config)
             .set_repo_config(repo_config)
