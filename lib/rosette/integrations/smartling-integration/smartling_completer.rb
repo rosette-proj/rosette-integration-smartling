@@ -12,6 +12,7 @@ module Rosette
 
         attr_reader :rosette_config, :repo_config
         attr_reader :thread_pool_size
+        attr_reader :logger
 
         def initialize(rosette_config)
           @rosette_config = rosette_config
@@ -40,7 +41,9 @@ module Rosette
             if all_locales_are_complete?(locales_map)
               begin
                 file = locales_map[repo_config.locales.first.code]
+                logger.info("Deleting file #{file_uri} from Smartling")
                 delete_file(file)
+                logger.info("Done deleting file #{file_uri} from Smartling")
               rescue => e
                 rosette_config.error_reporter.report_error(e)
               end
@@ -158,7 +161,9 @@ module Rosette
 
             while list.size > 0
               list.each(&block)
+              logger.info("Grabbing file list for locale #{locale_code} with offset #{counter}")
               list = get_file_list(locale_code, counter + 1)
+              logger.info("Done grabbing file list for locale #{locale_code} with offset #{counter}")
               counter += list.size + 1
             end
           else
