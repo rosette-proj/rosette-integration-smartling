@@ -56,24 +56,24 @@ module Rosette
         private
 
         def pull_synchronously
-          head_refs = repo_config.repo.all_head_refs
-          head_refs.each_with_index do |head_ref, idx|
-            pull_head(head_ref)
+          pending_count = rosette_config.datastore.pending_commit_log_count(repo_config.name)
+          rosette_config.datastore.each_pending_commit_log(repo_config.name).with_index do |commit_log, idx|
+            pull_commit(commit_log.commit_id)
             logger.info(
-              "#{repo_config.name}: #{idx} of #{head_refs.size} pulled"
+              "#{repo_config.name}: #{idx} of #{pending_count} pulled"
             )
           end
         end
 
         def pull_asynchronously
           pool = Concurrent::FixedThreadPool.new(thread_pool_size)
-          head_refs = repo_config.repo.all_head_refs
+          pending_count = rosette_config.datastore.pending_commit_log_count(repo_config.name)
 
-          head_refs.each do |head_ref|
-            pool << Proc.new { pull_head(head_ref) }
+          rosette_config.datastore.each_pending_commit_log(repo_config.name) do |commit_log|
+            pool << Proc.new { pull_commit(commit_log.commit_id) }
           end
 
-          drain_pool(pool, head_refs.size)
+          drain_pool(pool, pending_count)
         end
 
         def drain_pool(pool, total)
@@ -91,14 +91,14 @@ module Rosette
           end
         end
 
-        def pull_head(head_ref)
-          rev_commit = repo_config.repo.get_rev_commit(head_ref)
+        def pull_commit(commit_id)
+          rev_commit = repo_config.repo.get_rev_commit(commit_id)
           phrases = phrases_for(rev_commit.getId.name)
           file_name = rev_commit.getId.name
           uploader = build_uploader(phrases, file_name)
 
           begin
-            sync_head(uploader, rev_commit.getId.name)
+            sync_commit(uploader, rev_commit.getId.name)
           rescue => e
             # report error but keep pulling the rest of the heads
             rosette_config.error_reporter.report_error(e)
@@ -107,7 +107,7 @@ module Rosette
           end
         end
 
-        def sync_head(uploader, commit_id)
+        def sync_commit(uploader, commit_id)
           uploader.upload
 
           repo_config.locales.each do |locale|
@@ -124,7 +124,6 @@ module Rosette
             .force_encoding(extractor_config.encoding)
 
           import_phrases_from(contents, locale, uploader, commit_id)
-          update_commit_log_for(locale, uploader, commit_id)
         end
 
         def import_phrases_from(contents, locale, uploader, commit_id)
@@ -143,16 +142,6 @@ module Rosette
               )
             end
           end
-        end
-
-        def update_commit_log_for(locale, uploader, commit_id)
-          file = file_status_for(uploader.destination_file_uri, locale)
-
-          rosette_config.datastore.add_or_update_commit_log(
-            repo_config.name, commit_id, nil,
-            Rosette::DataStores::PhraseStatus::PENDING,
-            file.phrase_count
-          )
         end
 
         def commit_ids_from(phrases)
