@@ -99,6 +99,7 @@ module Rosette
 
           begin
             sync_commit(uploader, rev_commit.getId.name)
+            update_commit_log(uploader, rev_commit.getId.name)
           rescue => e
             # report error but keep pulling the rest of the heads
             rosette_config.error_reporter.report_error(e)
@@ -124,8 +125,6 @@ module Rosette
             .force_encoding(extractor_config.encoding)
 
           import_translations_from(contents, locale, uploader, commit_id)
-          # TODO: I don't think we actually want to do this, update the commit log for every locale?
-          update_commit_log_for(locale, uploader, commit_id)
         end
 
         def import_translations_from(contents, locale, uploader, commit_id)
@@ -146,13 +145,28 @@ module Rosette
           end
         end
 
-        def update_commit_log_for(locale, uploader, commit_id)
-          file = file_status_for(uploader.destination_file_uri, locale)
+        def update_commit_log(uploader, commit_id)
+          files = repo_config.locales.map do |locale|
+            file_status_for(uploader.destination_file_uri, locale)
+          end
+
+          status = if files.all?(&:complete?)
+            Rosette::DataStores::PhraseStatus::TRANSLATED
+          else
+            Rosette::DataStores::PhraseStatus::PENDING
+          end
 
           rosette_config.datastore.add_or_update_commit_log(
-            repo_config.name, commit_id, nil,
-            Rosette::DataStores::PhraseStatus::PENDING
+            repo_config.name, commit_id, nil, status
           )
+        end
+
+        def file_status_for(file_uri, locale)
+          Retrier.retry(times: 3) do
+            SmartlingTmpFile.from_api_response(
+              smartling_api.status(file_uri, locale: locale.code)
+            )
+          end.on_error(Exception).execute
         end
 
         def commit_ids_from(phrases)
