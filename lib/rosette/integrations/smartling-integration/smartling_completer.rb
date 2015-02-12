@@ -65,18 +65,6 @@ module Rosette
               file.commit_id, locale, file.translated_count
             )
           end
-
-          status = if all_locales_are_complete?(locales_map)
-            Rosette::DataStores::PhraseStatus::TRANSLATED
-          else
-            Rosette::DataStores::PhraseStatus::PENDING
-          end
-
-          file = locales_map[repo_config.locales.first.code]
-
-          rosette_config.datastore.add_or_update_commit_log(
-            file.repo_name, file.commit_id, nil, status
-          )
         end
 
         def all_locales_are_complete?(locales_map)

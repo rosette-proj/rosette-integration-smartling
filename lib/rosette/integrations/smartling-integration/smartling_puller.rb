@@ -123,10 +123,12 @@ module Rosette
           contents = download_file(uploader.destination_file_uri, locale)
             .force_encoding(extractor_config.encoding)
 
-          import_phrases_from(contents, locale, uploader, commit_id)
+          import_translations_from(contents, locale, uploader, commit_id)
+          # TODO: I don't think we actually want to do this, update the commit log for every locale?
+          update_commit_log_for(locale, uploader, commit_id)
         end
 
-        def import_phrases_from(contents, locale, uploader, commit_id)
+        def import_translations_from(contents, locale, uploader, commit_id)
           extractor.extract_each_from(contents) do |phrase_object|
             begin
               Rosette::Core::Commands::AddOrUpdateTranslationCommand.new(rosette_config)
@@ -142,6 +144,15 @@ module Rosette
               )
             end
           end
+        end
+
+        def update_commit_log_for(locale, uploader, commit_id)
+          file = file_status_for(uploader.destination_file_uri, locale)
+
+          rosette_config.datastore.add_or_update_commit_log(
+            repo_config.name, commit_id, nil,
+            Rosette::DataStores::PhraseStatus::PENDING
+          )
         end
 
         def commit_ids_from(phrases)
