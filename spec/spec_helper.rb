@@ -16,6 +16,10 @@ RSpec.configure do |config|
     "#{repo_name}/#{author}/#{commit_id}.yml"
   end
 
+  def create_tmp_file_uri(repo_name, commit_id)
+    "#{repo_name}/#{commit_id}.yml"
+  end
+
   def fake_hex_string(length = 10)
     (('a'..'z').to_a + ('0'..'9').to_a).sample(length).join
   end
@@ -40,6 +44,15 @@ RSpec.configure do |config|
     }
   end
 
+  def create_tmp_file_entry(options = {})
+    create_file_entry(options).merge(
+      'fileUri' => create_tmp_file_uri(
+        options.fetch('repo_name', fake_string),
+        options.fetch('commit_id', fake_hex_string(38))
+      )
+    )
+  end
+
   def create_file_list(files)
     case files
       when Array
@@ -48,6 +61,18 @@ RSpec.configure do |config|
         {
           'fileCount' => files,
           'fileList' => files.times.map { create_file_entry }
+        }
+    end
+  end
+
+  def create_tmp_file_list(files)
+    case files
+      when Array
+        { 'fileCount' => files.size, 'fileList' => files }
+      when Fixnum
+        {
+          'fileCount' => files,
+          'fileList' => files.times.map { create_tmp_file_entry }
         }
     end
   end
