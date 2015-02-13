@@ -176,9 +176,14 @@ module Rosette
         end
 
         def download_file(file_uri, locale)
-          Retrier.retry(times: 3) do
+          retrier = Retrier.retry(times: 5) do
             smartling_api.download(file_uri, locale: locale.code)
-          end.on_error(Exception).execute
+          end
+
+          retrier
+            .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
+            .on_error(Exception)
+            .execute
         end
 
         def delete_file(file_uri)
