@@ -162,11 +162,16 @@ module Rosette
         end
 
         def file_status_for(file_uri, locale)
-          Retrier.retry(times: 3) do
+          retrier = Retrier.retry(times: 5) do
             SmartlingTmpFile.from_api_response(
               smartling_api.status(file_uri, locale: locale.code)
             )
-          end.on_error(Exception).execute
+          end
+
+          retrier
+            .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
+            .on_error(Exception)
+            .execute
         end
 
         def commit_ids_from(phrases)
