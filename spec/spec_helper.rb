@@ -12,6 +12,10 @@ require 'rosette/extractors/yaml-extractor'
 require 'rosette/data_stores/in_memory_data_store'
 
 RSpec.configure do |config|
+  config.after(:each) do
+    Rosette::DataStores::InMemoryDataStore.all_entries.clear
+  end
+
   def create_file_uri(repo_name, author, commit_id)
     "#{repo_name}/#{author}/#{commit_id}.yml"
   end

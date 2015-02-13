@@ -74,12 +74,63 @@ describe SmartlingIntegration::SmartlingPuller do
     )
   end
 
+  after(:each) do
+    repo.unlink
+  end
+
+  it "doesn't change the commit log status if the file isn't fully translated" do
+    expect(smartling_api_base).to(
+      receive(:upload).and_return({ 'stringCount' => 1 })
+    )
+
+    locales.each do |locale|
+      expect(smartling_api_base).to(
+        receive(:status)
+          .with(file_uri, locale: locale)
+          .and_return(
+            create_file_entry(
+              'fileUri' => file_uri,
+              'stringCount' => 1,
+              'completedStringCount' => 0
+            )
+          )
+      )
+
+      expect(smartling_api_base).to(
+        receive(:download)
+          .with(file_uri, locale: locale)
+          .and_return("es-ES:\n  phrase: I'm in #{locale}\n")
+      )
+    end
+
+    expect(smartling_api_base).to receive(:delete).with(file_uri)
+    puller.pull
+
+    commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
+      entry.commit_id == commit_id && entry.repo_name == repo_name
+    end
+
+    expect(commit_log_entry.status).to eq('PENDING')
+  end
+
   it 'uploads strings and downloads translations for each locale' do
     expect(smartling_api_base).to(
       receive(:upload).and_return({ 'stringCount' => 1 })
     )
 
     locales.each do |locale|
+      expect(smartling_api_base).to(
+        receive(:status)
+          .with(file_uri, locale: locale)
+          .and_return(
+            create_file_entry(
+              'fileUri' => file_uri,
+              'stringCount' => 1,
+              'completedStringCount' => 1
+            )
+          )
+      )
+
       expect(smartling_api_base).to(
         receive(:download)
           .with(file_uri, locale: locale)
@@ -97,5 +148,11 @@ describe SmartlingIntegration::SmartlingPuller do
       expect(trans.translation).to eq("I'm in #{locale}")
       expect(trans.locale).to eq(locale)
     end
+
+    commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
+      entry.commit_id == commit_id && entry.repo_name == repo_name
+    end
+
+    expect(commit_log_entry.status).to eq('TRANSLATED')
   end
 end

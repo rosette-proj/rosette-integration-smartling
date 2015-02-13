@@ -43,11 +43,17 @@ describe SmartlingIntegration::SmartlingCompleter do
   end
 
   before(:each) do
-    integration_config.smartling_api.instance_variable_set(:'@api', smartling_api_base)
+    integration_config.smartling_api.instance_variable_set(
+      :'@api', smartling_api_base
+    )
+  end
+
+  after(:each) do
+    repo.unlink
   end
 
   describe '#complete' do
-    it 'deletes files that are complete in every locale, updates commit log' do
+    it 'deletes files that are complete in every locale' do
       expect(smartling_api_base).to(
         receive(:list)
           .with(locale: 'ko-KR', offset: 0, limit: 100)
@@ -82,22 +88,6 @@ describe SmartlingIntegration::SmartlingCompleter do
       end
 
       completer.complete
-
-      SmartlingIntegration::SmartlingFile.list_from_api_response(create_file_list(complete_files)).each do |file|
-        commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
-          file.commit_id == entry.commit_id && entry.repo_name
-        end
-
-        expect(commit_log_entry.status).to eq('TRANSLATED')
-      end
-
-      SmartlingIntegration::SmartlingFile.list_from_api_response(create_file_list(incomplete_files)).each do |file|
-        commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
-          file.commit_id == entry.commit_id && entry.repo_name
-        end
-
-        expect(commit_log_entry.status).to eq('PENDING')
-      end
     end
   end
 end

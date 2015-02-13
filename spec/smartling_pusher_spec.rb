@@ -41,6 +41,10 @@ describe SmartlingIntegration::SmartlingPusher do
     )
   end
 
+  after(:each) do
+    repo.unlink
+  end
+
   def add_file_to_repo
     repo.create_file('foo.txt') do |f|
       f.write("foobar_metakey: foobar_key\n")
