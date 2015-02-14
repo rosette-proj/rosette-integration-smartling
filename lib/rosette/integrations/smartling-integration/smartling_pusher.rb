@@ -11,6 +11,7 @@ module Rosette
 
         attr_reader :rosette_config, :repo_config
         attr_reader :serializer_id, :thread_pool_size
+        attr_reader :logger
 
         def initialize(rosette_config)
           @rosette_config = rosette_config
