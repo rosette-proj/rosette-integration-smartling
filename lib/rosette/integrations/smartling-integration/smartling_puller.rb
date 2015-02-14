@@ -56,8 +56,14 @@ module Rosette
         private
 
         def pull_synchronously
-          pending_count = rosette_config.datastore.pending_commit_log_count(repo_config.name)
-          rosette_config.datastore.each_pending_commit_log(repo_config.name).with_index do |commit_log, idx|
+          status = status = Rosette::DataStores::PhraseStatus::PENDING
+          datastore = rosette_config.datastore
+
+          pending_count = datastore.commit_log_with_status_count(
+            repo_config.name, status
+          )
+
+          datastore.each_commit_log_with_status(repo_config.name, status).with_index do |commit_log, idx|
             pull_commit(commit_log.commit_id)
             logger.info(
               "#{repo_config.name}: #{idx} of #{pending_count} pulled"
@@ -67,9 +73,14 @@ module Rosette
 
         def pull_asynchronously
           pool = Concurrent::FixedThreadPool.new(thread_pool_size)
-          pending_count = rosette_config.datastore.pending_commit_log_count(repo_config.name)
+          status = status = Rosette::DataStores::PhraseStatus::PENDING
+          datastore = rosette_config.datastore
 
-          rosette_config.datastore.each_pending_commit_log(repo_config.name) do |commit_log|
+          pending_count = datastore.pending_commit_log_count(
+            repo_config.name, status
+          )
+
+          datastore.each_pending_commit_log(repo_config.name, status) do |commit_log|
             pool << Proc.new { pull_commit(commit_log.commit_id) }
           end
 
