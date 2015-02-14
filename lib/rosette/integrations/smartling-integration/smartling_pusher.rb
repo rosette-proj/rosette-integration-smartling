@@ -1,14 +1,20 @@
 # encoding: UTF-8
 
+require 'concurrent'
+
 module Rosette
   module Integrations
     class SmartlingIntegration < Integration
       class SmartlingPusher
 
+        DEFAULT_THREAD_POOL_SIZE = 10
+
         attr_reader :rosette_config, :repo_config
+        attr_reader :serializer_id, :thread_pool_size
 
         def initialize(rosette_config)
           @rosette_config = rosette_config
+          @thread_pool_size = DEFAULT_THREAD_POOL_SIZE
         end
 
         def set_repo_config(repo_config)
@@ -16,7 +22,72 @@ module Rosette
           self
         end
 
-        def push(commit_id, serializer_id)
+        def set_serializer_id(serializer_id)
+          @serializer_id = serializer_id
+          self
+        end
+
+        def set_thread_pool_size(size)
+          @thread_pool_size = size
+          self
+        end
+
+        def set_logger(logger)
+          @logger = logger
+          self
+        end
+
+        def push
+          if thread_pool_size > 0
+            push_asynchronously
+          else
+            push_synchronously
+          end
+        end
+
+        private
+
+        def push_synchronously
+          status = Rosette::DataStores::PhraseStatus::UNTRANSLATED
+          datastore = rosette_config.datastore
+
+          datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
+            push_commit(commit_log.commit_id)
+          end
+        end
+
+        def push_asynchronously
+          pool = Concurrent::FixedThreadPool.new(thread_pool_size)
+          status = Rosette::DataStores::PhraseStatus::UNTRANSLATED
+          datastore = rosette_config.datastore
+
+          untrans_count = rosette_config.datastore.commit_log_with_status_count(
+            repo_config.name, status
+          )
+
+          datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
+            pool << Proc.new { push_commit(commit_log.commit_id) }
+          end
+
+          drain_pool(pool, untrans_count)
+        end
+
+        def drain_pool(pool, total)
+          pool.shutdown
+          last_completed_count = 0
+
+          while pool.shuttingdown?
+            current_completed_count = pool.completed_task_count
+
+            if current_completed_count > last_completed_count
+              logger.info("#{repo_config.name}: #{current_completed_count} of #{total} pushed")
+            end
+
+            last_completed_count = current_completed_count
+          end
+        end
+
+        def push_commit(commit_id)
           phrases = phrases_for(commit_id)
 
           if phrases.size > 0
@@ -36,8 +107,6 @@ module Rosette
         rescue => ex
           rosette_config.error_reporter.report_error(ex)
         end
-
-        private
 
         def file_name_for(commit_id)
           rev_commit = repo_config.repo.get_rev_commit(commit_id)
