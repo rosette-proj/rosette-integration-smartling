@@ -76,11 +76,11 @@ module Rosette
           status = status = Rosette::DataStores::PhraseStatus::PENDING
           datastore = rosette_config.datastore
 
-          pending_count = datastore.pending_commit_log_count(
+          pending_count = datastore.commit_log_with_status_count(
             repo_config.name, status
           )
 
-          datastore.each_pending_commit_log(repo_config.name, status) do |commit_log|
+          datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
             pool << Proc.new { pull_commit(commit_log.commit_id) }
           end
 
