@@ -45,7 +45,9 @@ module Rosette
                 delete_file(file)
                 logger.info("Done deleting file #{file_uri} from Smartling")
               rescue => e
-                rosette_config.error_reporter.report_error(e)
+                rosette_config.error_reporter.report_error(e, {
+                  file_uri: file_uri, locales_map: locales_map
+                })
               end
             end
           end

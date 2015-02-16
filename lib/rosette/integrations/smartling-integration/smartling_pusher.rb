@@ -106,7 +106,9 @@ module Rosette
             Rosette::DataStores::PhraseStatus::PENDING, phrase_count
           )
         rescue => ex
-          rosette_config.error_reporter.report_error(ex)
+          rosette_config.error_reporter.report_error(ex, {
+            commit_id: commit_id
+          })
         end
 
         def file_name_for(commit_id)

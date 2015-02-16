@@ -112,8 +112,10 @@ module Rosette
             sync_commit(uploader, rev_commit.getId.name)
             update_commit_log(uploader, rev_commit.getId.name)
           rescue => e
-            # report error but keep pulling the rest of the heads
-            rosette_config.error_reporter.report_error(e)
+            # report error but keep pulling the rest of the commits
+            rosette_config.error_reporter.report_error(e, {
+              commit_id: commit_id, file_name: file_name
+            })
           ensure
             cleanup(uploader)
           end
