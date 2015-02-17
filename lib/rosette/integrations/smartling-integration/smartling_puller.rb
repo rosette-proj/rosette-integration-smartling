@@ -179,7 +179,7 @@ module Rosette
         end
 
         def file_status_for(file_uri, locale)
-          retrier = Retrier.retry(times: 9, base_sleep_seconds: 1.5) do
+          retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
             SmartlingTmpFile.from_api_response(
               smartling_api.status(file_uri, locale: locale.code)
             )
@@ -199,7 +199,7 @@ module Rosette
         end
 
         def download_file(file_uri, locale)
-          retrier = Retrier.retry(times: 9, base_sleep_seconds: 1.5) do
+          retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
             smartling_api.download(file_uri, locale: locale.code)
           end
 
