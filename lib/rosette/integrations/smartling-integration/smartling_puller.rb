@@ -109,7 +109,11 @@ module Rosette
           uploader = build_uploader(phrases, file_name)
 
           begin
-            sync_commit(uploader, rev_commit.getId.name)
+            # avoid uploading a file with no phrases (smartling doesn't like that)
+            if phrases.size > 0
+              sync_commit(uploader, rev_commit.getId.name)
+            end
+
             update_commit_log(uploader, rev_commit.getId.name)
           rescue => e
             # report error but keep pulling the rest of the commits
