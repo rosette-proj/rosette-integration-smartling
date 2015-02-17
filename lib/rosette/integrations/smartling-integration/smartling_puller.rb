@@ -187,6 +187,7 @@ module Rosette
 
           retrier
             .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
+            .on_error(RuntimeError, message: /VALIDATION_ERROR/, backoff: true)
             .on_error(Exception)
             .execute
         end
@@ -204,6 +205,7 @@ module Rosette
 
           retrier
             .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
+            .on_error(RuntimeError, message: /VALIDATION_ERROR/, backoff: true)
             .on_error(Exception)
             .execute
         end
