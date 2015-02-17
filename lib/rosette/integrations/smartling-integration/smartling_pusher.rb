@@ -105,10 +105,23 @@ module Rosette
             repo_config.name, commit_id, nil,
             Rosette::DataStores::PhraseStatus::PENDING, phrase_count
           )
+        rescue Java::OrgEclipseJgitErrors::MissingObjectException
+          mark_commit_as_missing(commit_id)
+
+          rosette_config.error_reporter.report_warning("Marking commit #{commit_id} as missing.")
         rescue => ex
           rosette_config.error_reporter.report_error(ex, {
             commit_id: commit_id
           })
+        end
+
+        def mark_commit_as_missing(commit_id)
+          rosette_config.datastore.add_or_update_commit_log(
+            repo_config.name,
+            commit_id,
+            nil,
+            Rosette::DataStores::PhraseStatus::MISSING
+          )
         end
 
         def file_name_for(commit_id)
