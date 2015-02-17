@@ -3,6 +3,7 @@ source 'https://rubygems.org'
 ruby '2.0.0', engine: 'jruby', engine_version: '1.7.15'
 
 gem 'smartling'
+gem 'concurrent-ruby', '~> 0.7.0'
 
 group :development, :test do
   gem 'rosette-datastore-memory', path: '~/workspace/rosette-datastore-memory'

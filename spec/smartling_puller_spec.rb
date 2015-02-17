@@ -7,127 +7,152 @@ include Rosette::DataStores
 
 describe SmartlingIntegration::SmartlingPuller do
   let(:repo_name) { 'test_repo' }
-  let(:author) { 'KathrynJaneway' }
-  let(:locale) { 'ko-KR' }
+  let(:locales) { ['es-ES', 'pt-BR'] }
   let(:repo) { TmpRepo.new }
 
-  let(:configuration) do
+  let(:rosette_config) do
     Rosette.build_config do |config|
       config.use_datastore('in-memory')
+      config.use_error_reporter(Rosette::Core::RaisingErrorReporter.new)
       config.add_repo(repo_name) do |repo_config|
         repo_config.set_path(File.join(repo.working_dir, '/.git'))
+        repo_config.add_locales(locales)
+        repo_config.add_integration('smartling')
+        repo_config.add_extractor('yaml/rails')
       end
     end
   end
 
-  let(:puller) { SmartlingIntegration::SmartlingPuller.new(configuration, smartling_api) }
-  let(:smartling_api_base) { double(:smartling_api) }
-  let(:smartling_api) { SmartlingIntegration::SmartlingApi.new }
-  let(:rosette_api) { double(:rosette_api) }
+  let(:serializer_id) { 'yaml/rails' }
   let(:extractor_id) { 'yaml/rails' }
+  let(:repo_config) { rosette_config.get_repo(repo_name) }
+  let(:smartling_api_base) { double(:smartling_api) }
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
-  let(:file_uri_params) { { 'repo_name' => repo_name, 'author' => author, 'commit_id' => commit_id }}
+  let(:integration_config) { repo_config.get_integration('smartling') }
+  let(:file_uri) { "#{repo_name}/#{commit_id}.yml" }
+
+  let(:puller) do
+    SmartlingIntegration::SmartlingPuller.new(rosette_config)
+      .set_repo_config(repo_config)
+      .set_serializer_id(serializer_id)
+      .set_extractor_id(extractor_id)
+      .set_thread_pool_size(0)
+  end
 
   before(:each) do
     repo.create_file('foo.txt') do |f|
-      f.write('I just need a commit')
+      f.write("en:\n  phrase: I'm a little teapot\n")
     end
 
     repo.add_all
     repo.commit('First commit')
 
-    InMemoryDataStore::CommitLogLocale.create(
+    locales.each do |locale|
+      InMemoryDataStore::CommitLogLocale.create(
+        commit_id: commit_id,
+        locale: locale,
+        translated_count: 1
+      )
+    end
+
+    InMemoryDataStore::Phrase.create(
+      repo_name: repo_name,
       commit_id: commit_id,
-      locale: locale,
-      translated_count: 1
+      meta_key: 'phrase',
+      key: "I'm a little teapot",
+      file: 'foo.txt'
     )
 
-    allow(smartling_api_base).to receive(:download).and_return(
-      YAML.dump(locale => { 'foo' => { 'bar' => 'baz' } })
+    InMemoryDataStore::CommitLog.create(
+      repo_name: repo_name,
+      commit_id: commit_id,
+      status: 'PENDING'
     )
 
-    smartling_api.instance_variable_set(:'@api', smartling_api_base)
+    integration_config.smartling_api.instance_variable_set(
+      :'@api', smartling_api_base
+    )
   end
 
-  context 'with a single configured extractor' do
-    before(:each) do
-      configuration.get_repo(repo_name).add_extractor(extractor_id)
-
-      expect(rosette_api).to receive(:add_or_update_translation).with({
-        meta_key: 'foo.bar', ref: commit_id,
-        translation: 'baz', locale: locale,
-        repo_name: repo_name
-      })
-    end
-
-    it 'updates the commit log and calls the api to add/update translations' do
-      expect(smartling_api_base).to receive(:list).and_return(
-        create_file_list([create_file_entry(file_uri_params.merge('completedStringCount' => 2))])
-      )
-
-      puller.pull(locale, extractor_id, rosette_api)
-
-      commit_log_locale = InMemoryDataStore::CommitLogLocale.find do |entry|
-        entry.commit_id == commit_id && entry.locale == locale
-      end
-
-      expect(commit_log_locale.translated_count).to eq(2)
-    end
-
-    it 'encodes data correctly before handing it to the extractor' do
-      expect(smartling_api_base).to receive(:list).and_return(
-        create_file_list([create_file_entry(file_uri_params.merge('completedStringCount' => 2))])
-      )
-
-      allow(smartling_api_base).to receive(:download).and_return(
-        YAML.dump(locale => { 'foo' => { 'bar' => 'baz' } }).encode(Encoding::UTF_16BE)
-      )
-
-      puller.pull(locale, extractor_id, rosette_api, Encoding::UTF_16BE)
-
-      commit_log_locale = InMemoryDataStore::CommitLogLocale.find do |entry|
-        entry.commit_id == commit_id && entry.locale == locale
-      end
-
-      expect(commit_log_locale.translated_count).to eq(2)
-    end
+  after(:each) do
+    repo.unlink
   end
 
-  context 'with multiple configured extractors with different encodings' do
-    before(:each) do
-      repo_config = configuration.get_repo(repo_name)
+  it "doesn't change the commit log status if the file isn't fully translated" do
+    expect(smartling_api_base).to(
+      receive(:upload).and_return({ 'stringCount' => 1 })
+    )
 
-      repo_config.add_extractor(extractor_id) do |ext|
-        ext.set_encoding(Encoding::UTF_8)
-      end
-
-      repo_config.add_extractor(extractor_id) do |ext|
-        ext.set_encoding(Encoding::UTF_16BE)
-      end
-    end
-
-    it 'raises an exception because of encoding ambiguity' do
-      expect(smartling_api_base).to receive(:list).and_return(
-        create_file_list([create_file_entry(file_uri_params.merge('completedStringCount' => 2))])
+    locales.each do |locale|
+      expect(smartling_api_base).to(
+        receive(:status)
+          .with(file_uri, locale: locale)
+          .and_return(
+            create_file_entry(
+              'fileUri' => file_uri,
+              'stringCount' => 1,
+              'completedStringCount' => 0
+            )
+          )
       )
 
-      expect { puller.pull(locale, extractor_id, rosette_api) }.to(
-        raise_error(SmartlingIntegration::Errors::AmbiguousEncodingError)
+      expect(smartling_api_base).to(
+        receive(:download)
+          .with(file_uri, locale: locale)
+          .and_return("es-ES:\n  phrase: I'm in #{locale}\n")
       )
     end
 
-    it 'does not throw an error if an explicit encoding is passed' do
-      expect(rosette_api).to receive(:add_or_update_translation).with({
-        meta_key: 'foo.bar', ref: commit_id,
-        translation: 'baz', locale: locale,
-        repo_name: repo_name
-      })
+    expect(smartling_api_base).to receive(:delete).with(file_uri)
+    puller.pull
 
-      expect(smartling_api_base).to receive(:list).and_return(
-        create_file_list([create_file_entry(file_uri_params.merge('completedStringCount' => 2))])
+    commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
+      entry.commit_id == commit_id && entry.repo_name == repo_name
+    end
+
+    expect(commit_log_entry.status).to eq('PENDING')
+  end
+
+  it 'uploads strings and downloads translations for each locale' do
+    expect(smartling_api_base).to(
+      receive(:upload).and_return({ 'stringCount' => 1 })
+    )
+
+    locales.each do |locale|
+      expect(smartling_api_base).to(
+        receive(:status)
+          .with(file_uri, locale: locale)
+          .and_return(
+            create_file_entry(
+              'fileUri' => file_uri,
+              'stringCount' => 1,
+              'completedStringCount' => 1
+            )
+          )
       )
 
-      expect { puller.pull(locale, extractor_id, rosette_api, Encoding::UTF_8) }.to_not raise_error
+      expect(smartling_api_base).to(
+        receive(:download)
+          .with(file_uri, locale: locale)
+          .and_return("es-ES:\n  phrase: I'm in #{locale}\n")
+      )
     end
+
+    expect(smartling_api_base).to receive(:delete).with(file_uri)
+    puller.pull
+
+    locales.each do |locale|
+      trans = InMemoryDataStore::Translation.find { |trans| trans.locale == locale }
+      expect(trans.phrase.key).to eq("I'm a little teapot")
+      expect(trans.phrase.meta_key).to eq('phrase')
+      expect(trans.translation).to eq("I'm in #{locale}")
+      expect(trans.locale).to eq(locale)
+    end
+
+    commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
+      entry.commit_id == commit_id && entry.repo_name == repo_name
+    end
+
+    expect(commit_log_entry.status).to eq('TRANSLATED')
   end
 end

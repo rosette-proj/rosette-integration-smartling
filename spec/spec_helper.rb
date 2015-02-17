@@ -12,8 +12,16 @@ require 'rosette/extractors/yaml-extractor'
 require 'rosette/data_stores/in_memory_data_store'
 
 RSpec.configure do |config|
+  config.after(:each) do
+    Rosette::DataStores::InMemoryDataStore.all_entries.clear
+  end
+
   def create_file_uri(repo_name, author, commit_id)
     "#{repo_name}/#{author}/#{commit_id}.yml"
+  end
+
+  def create_tmp_file_uri(repo_name, commit_id)
+    "#{repo_name}/#{commit_id}.yml"
   end
 
   def fake_hex_string(length = 10)
@@ -26,7 +34,7 @@ RSpec.configure do |config|
 
   def create_file_entry(options = {})
     {
-      'fileUri' => create_file_uri(
+      'fileUri' => options['fileUri'] || create_file_uri(
         options.fetch('repo_name', fake_string),
         options.fetch('author', "#{fake_string} #{fake_string}"),
         options.fetch('commit_id', fake_hex_string(38))
@@ -40,6 +48,15 @@ RSpec.configure do |config|
     }
   end
 
+  def create_tmp_file_entry(options = {})
+    create_file_entry(options).merge(
+      'fileUri' => create_tmp_file_uri(
+        options.fetch('repo_name', fake_string),
+        options.fetch('commit_id', fake_hex_string(38))
+      )
+    )
+  end
+
   def create_file_list(files)
     case files
       when Array
@@ -51,12 +68,25 @@ RSpec.configure do |config|
         }
     end
   end
+
+  def create_tmp_file_list(files)
+    case files
+      when Array
+        { 'fileCount' => files.size, 'fileList' => files }
+      when Fixnum
+        {
+          'fileCount' => files,
+          'fileList' => files.times.map { create_tmp_file_entry }
+        }
+    end
+  end
 end
 
 class NilLogger
   def info(msg); end
   def warn(msg); end
   def error(msg); end
+  def write(msg); end
 end
 
 Rosette.logger = NilLogger.new

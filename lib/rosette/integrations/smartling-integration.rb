@@ -10,8 +10,10 @@ module Rosette
       autoload :SmartlingApi,       'rosette/integrations/smartling-integration/smartling_api'
       autoload :SmartlingPusher,    'rosette/integrations/smartling-integration/smartling_puller'
       autoload :SmartlingPuller,    'rosette/integrations/smartling-integration/smartling_pusher'
+      autoload :SmartlingUploader,  'rosette/integrations/smartling-integration/smartling_uploader'
       autoload :SmartlingCompleter, 'rosette/integrations/smartling-integration/smartling_completer'
       autoload :SmartlingFile,      'rosette/integrations/smartling-integration/smartling_file'
+      autoload :SmartlingTmpFile,   'rosette/integrations/smartling-integration/smartling_tmp_file'
       autoload :Retrier,            'rosette/integrations/smartling-integration/retrier'
       autoload :Configurator,       'rosette/integrations/smartling-integration/configurator'
 
@@ -22,9 +24,7 @@ module Rosette
       end
 
       def integrate(obj)
-        if integrates_with?(obj)
-          integrate_with_repo_config(obj)
-        else
+        unless integrates_with?(obj)
           raise Errors::ImpossibleIntegrationError,
             "Cannot integrate #{self.class.name} with #{obj}"
         end
@@ -37,26 +37,6 @@ module Rosette
       def smartling_api
         @smartling_api ||=
           SmartlingApi.new(configuration.api_options)
-      end
-
-      private
-
-      def integrate_with_repo_config(obj)
-        obj.after(:commit) do |rosette_config, repo_config, commit_id|
-          smartling_pusher(rosette_config, repo_config.name).push(
-            commit_id, configuration.serializer_id
-          )
-        end
-      end
-
-      def smartling_pusher(rosette_config, repo_name)
-        smartling_pushers[repo_name] ||= SmartlingPusher.new(
-          rosette_config, configuration, repo_name, smartling_api
-        )
-      end
-
-      def smartling_pushers
-        @smartling_pushers ||= {}
       end
     end
 

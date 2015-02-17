@@ -1,104 +1,139 @@
 # encoding: UTF-8
 
+require 'concurrent'
+
 module Rosette
   module Integrations
     class SmartlingIntegration < Integration
       class SmartlingPusher
-        FILE_TYPES =
-          %w(android ios gettext html javaProperties yaml xliff xml json docx pptx xlsx idml qt resx plaintext)
 
-        SERIALIZER_FILE_TYPE_MAP = {
-          'xml/android' => 'android'
-        }
+        DEFAULT_THREAD_POOL_SIZE = 10
 
-        attr_reader :rosette_config, :integration_config, :repo_name, :smartling_api
+        attr_reader :rosette_config, :repo_config
+        attr_reader :serializer_id, :thread_pool_size
+        attr_reader :logger
 
-        def initialize(rosette_config, integration_config, repo_name, smartling_api)
-          @smartling_api = smartling_api
-          @integration_config = integration_config
+        def initialize(rosette_config)
           @rosette_config = rosette_config
-          @repo_name = repo_name
+          @thread_pool_size = DEFAULT_THREAD_POOL_SIZE
         end
 
-        def push(commit_id, serializer_id)
-          phrases = phrases_for(commit_id)
+        def set_repo_config(repo_config)
+          @repo_config = repo_config
+          self
+        end
 
-          serializer_const = Rosette::Core::SerializerId.resolve(serializer_id)
-          dest_filename = destination_filename_for(commit_id, serializer_const)
+        def set_serializer_id(serializer_id)
+          @serializer_id = serializer_id
+          self
+        end
 
-          file_for_upload(phrases, serializer_const) do |tmp_file|
-            response = smartling_api.upload(
-              tmp_file.path,
-              dest_filename,
-              file_type_for(serializer_id), {
-                approved: smartling_api.preapprove_translations?
-              }
-            )
+        def set_thread_pool_size(size)
+          @thread_pool_size = size
+          self
+        end
 
-            phrase_count = response['stringCount']
-            rosette_config.datastore.add_or_update_commit_log(
-              repo_name, commit_id, nil, Rosette::DataStores::PhraseStatus::PENDING, phrase_count
-            )
+        def set_logger(logger)
+          @logger = logger
+          self
+        end
+
+        def push
+          if thread_pool_size > 0
+            push_asynchronously
+          else
+            push_synchronously
           end
-        rescue => ex
-          Rosette.logger.error('Caught an exception while pushing to Smartling API.')
-          Rosette.logger.error("#{ex.message}\n#{ex.backtrace.join("\n")}")
-          raise ex
         end
 
         private
 
-        def phrases_for(commit_id)
-          Rosette::Core::Commands::SnapshotCommand.new(rosette_config)
-            .set_repo_name(repo_name)
-            .set_commit_id(commit_id)
-            .execute
-        end
+        def push_synchronously
+          status = Rosette::DataStores::PhraseStatus::UNTRANSLATED
+          datastore = rosette_config.datastore
 
-        # For serializer ids like yaml/rails and json/key-value, the
-        # file type can be inferred from the first half (i.e. 'yaml'
-        # and 'json'). For ambiguous file types like android xml, we
-        # make use of SERIALIZER_FILE_TYPE_MAP which directly maps
-        # serializer ids to file types.
-        def file_type_for(serializer_id)
-          if type = SERIALIZER_FILE_TYPE_MAP[serializer_id]
-            type
-          else
-            id_parts = Rosette::Core::SerializerId.parse_id(serializer_id)
-            id_parts.find do |id_part|
-              FILE_TYPES.include?(id_part)
-            end
+          datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
+            push_commit(commit_log.commit_id)
           end
         end
 
-        def destination_filename_for(commit_id, serializer_const)
-          repo = rosette_config.get_repo(repo_name).repo
-          rev_commit = repo.get_rev_commit(commit_id)
+        def push_asynchronously
+          pool = Concurrent::FixedThreadPool.new(thread_pool_size)
+          status = Rosette::DataStores::PhraseStatus::UNTRANSLATED
+          datastore = rosette_config.datastore
+
+          untrans_count = rosette_config.datastore.commit_log_with_status_count(
+            repo_config.name, status
+          )
+
+          datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
+            pool << Proc.new { push_commit(commit_log.commit_id) }
+          end
+
+          drain_pool(pool, untrans_count)
+        end
+
+        def drain_pool(pool, total)
+          pool.shutdown
+          last_completed_count = 0
+
+          while pool.shuttingdown?
+            current_completed_count = pool.completed_task_count
+
+            if current_completed_count > last_completed_count
+              logger.info("#{repo_config.name}: #{current_completed_count} of #{total} pushed")
+            end
+
+            last_completed_count = current_completed_count
+          end
+        end
+
+        def push_commit(commit_id)
+          phrases = phrases_for(commit_id)
+
+          if phrases.size > 0
+            file_name = file_name_for(commit_id)
+            uploader = build_uploader_for(
+              phrases, file_name, serializer_id
+            )
+
+            response = uploader.upload
+            phrase_count = response['stringCount']
+          end
+
+          rosette_config.datastore.add_or_update_commit_log(
+            repo_config.name, commit_id, nil,
+            Rosette::DataStores::PhraseStatus::PENDING, phrase_count
+          )
+        rescue => ex
+          rosette_config.error_reporter.report_error(ex, {
+            commit_id: commit_id
+          })
+        end
+
+        def file_name_for(commit_id)
+          rev_commit = repo_config.repo.get_rev_commit(commit_id)
 
           File.join(
-            repo_name,
-            get_identity_string(rev_commit),
-            "#{commit_id}#{serializer_const.default_extension}"
+            get_identity_string(rev_commit), commit_id
           )
         end
 
-        # @TODO: this will need to change if we inline phrases because
-        # we might not have meta_keys anymore (this method assumes we do)
-        def file_for_upload(phrases, serializer_const)
-          unless phrases.empty?
-            Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
-              serializer = serializer_const.new(file, rosette_config.get_repo(repo_name).source_locale)
-              serializer.write_raw(integration_config.directives + "\n")
+        def build_uploader_for(phrases, file_name, serializer_id)
+          SmartlingIntegration::SmartlingUploader.new(rosette_config)
+            .set_repo_config(repo_config)
+            .set_phrases(phrases)
+            .set_file_name(file_name)
+            .set_serializer_id(serializer_id)
+        end
 
-              phrases.each do |phrase|
-                serializer.write_key_value(phrase.index_value, phrase.key)
-              end
+        def phrases_for(commit_id)
+          diff = Rosette::Core::Commands::ShowCommand.new(rosette_config)
+            .set_repo_name(repo_config.name)
+            .set_commit_id(commit_id)
+            .execute
 
-              serializer.flush
-
-              yield file
-            end
-          end
+          (diff[:added] + diff[:modified]).map(&:phrase)
         end
 
         def get_identity_string(rev_commit)
@@ -119,10 +154,6 @@ module Rosette
             index = email.index('@') || 0
             email[0..index - 1].gsub(/[^\w]/, '')
           end
-        end
-
-        def encode_path(path)
-          SmartlingFile.encode_path(path)
         end
 
       end
