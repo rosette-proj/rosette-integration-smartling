@@ -41,7 +41,7 @@ module Rosette
         end
 
         def upload
-          Retrier.retry(times: 3) do
+          retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
             file_for_upload do |tmp_file|
               smartling_api.upload(
                 tmp_file.path,
@@ -51,7 +51,13 @@ module Rosette
                 }
               )
             end
-          end.on_error(Exception).execute
+          end
+
+          retrier
+            .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
+            .on_error(RuntimeError, message: /VALIDATION_ERROR/, backoff: true)
+            .on_error(Exception)
+            .execute
         end
 
         def destination_file_uri
