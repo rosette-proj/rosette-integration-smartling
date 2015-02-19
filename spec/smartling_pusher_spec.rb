@@ -29,6 +29,8 @@ describe SmartlingIntegration::SmartlingPusher do
   let(:pusher) do
     SmartlingIntegration::SmartlingPusher.new(rosette_config)
       .set_repo_config(repo_config)
+      .set_serializer_id(serializer_id)
+      .set_thread_pool_size(0)
   end
 
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
@@ -60,6 +62,14 @@ describe SmartlingIntegration::SmartlingPusher do
       commit_id: commit_id,
       file: 'foo.txt'
     )
+
+    InMemoryDataStore::CommitLog.create(
+      repo_name: repo_name,
+      commit_id: commit_id,
+      phrase_count: 1,
+      status: Rosette::DataStores::PhraseStatus::UNTRANSLATED,
+      commit_datetime: DateTime.now
+    )
   end
 
   describe '#push' do
@@ -67,7 +77,7 @@ describe SmartlingIntegration::SmartlingPusher do
       add_file_to_repo
 
       expect(smartling_api_base).to receive(:upload).and_return({ 'stringCount' => 1 })
-      pusher.push(commit_id, serializer_id)
+      pusher.push
 
       log_entry = InMemoryDataStore::CommitLog.find do |entry|
         entry.repo_name == repo_name &&
@@ -82,7 +92,24 @@ describe SmartlingIntegration::SmartlingPusher do
       add_file_to_repo
 
       allow(smartling_api_base).to receive(:upload).and_raise('Jelly beans')
-      expect { pusher.push(commit_id, serializer_id) }.to raise_error('Jelly beans')
+      expect { pusher.push }.to raise_error('Jelly beans')
+    end
+
+    context 'with a bad commit id' do
+      let(:commit_id) { 'abc123abc123abc123abc123abc123abc123abc1' }
+
+      it "marks commits as missing if jgit can't find them" do
+        add_file_to_repo
+        pusher.push
+
+        log_entry = InMemoryDataStore::CommitLog.find do |entry|
+          entry.commit_id == commit_id
+        end
+
+        expect(log_entry.status).to eq(
+          Rosette::DataStores::PhraseStatus::MISSING
+        )
+      end
     end
 
     it "uses the git author's name in the smartling file uri" do
@@ -93,7 +120,7 @@ describe SmartlingIntegration::SmartlingPusher do
         .with(anything, "#{repo_name}/KathrynJaneway/#{commit_id}.yml", anything, anything)
         .and_return({ 'stringCount' => 1 })
 
-      pusher.push(commit_id, serializer_id)
+      pusher.push
     end
 
     it "falls back to the first half of the git author's email if name is not set" do
@@ -106,7 +133,7 @@ describe SmartlingIntegration::SmartlingPusher do
         .with(anything, "#{repo_name}/kjaneway/#{commit_id}.yml", anything, anything)
         .and_return({ 'stringCount' => 1 })
 
-      pusher.push(commit_id, serializer_id)
+      pusher.push
     end
 
     it 'falls back to "unknown" if both the author name and email are unset' do
@@ -119,7 +146,7 @@ describe SmartlingIntegration::SmartlingPusher do
         .with(anything, "#{repo_name}/unknown/#{commit_id}.yml", anything, anything)
         .and_return({ 'stringCount' => 1 })
 
-      pusher.push(commit_id, serializer_id)
+      pusher.push
     end
   end
 end
