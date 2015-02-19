@@ -65,7 +65,7 @@ module Rosette
           )
 
           datastore.each_commit_log_with_status(repo_config.name, status).with_index do |commit_log, idx|
-            pull_commit(tm, commit_log.commit_id)
+            pull_commit(tm, commit_log)
             logger.info(
               "#{repo_config.name}: #{idx} of #{pending_count} pulled"
             )
