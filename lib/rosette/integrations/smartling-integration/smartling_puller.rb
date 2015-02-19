@@ -83,7 +83,7 @@ module Rosette
           )
 
           datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
-            pool << Proc.new { pull_commit(tm, commit_log.commit_id) }
+            pool << Proc.new { pull_commit(tm, commit_log) }
           end
 
           drain_pool(pool, pending_count)
@@ -104,18 +104,35 @@ module Rosette
           end
         end
 
-        def pull_commit(tm, commit_id)
-          rev_commit = repo_config.repo.get_rev_commit(commit_id)
-          phrases = phrases_for(rev_commit.getId.name)
+        def pull_commit(tm, commit_log)
+          commit_id = commit_log.commit_id
+          phrases = phrases_for(commit_id)
           commit_ids = commit_ids_from(phrases)
 
           begin
             sync_commit(tm, phrases, commit_ids)
+            update_logs_if_zero_phrases(commit_log)
           rescue => e
-            report error but keep pulling the rest of the commits
+            # report error but keep pulling the rest of the commits
             rosette_config.error_reporter.report_error(e, {
               commit_id: commit_id
             })
+          end
+        end
+
+        def update_logs_if_zero_phrases(commit_log)
+          if commit_log.phrase_count == 0
+            status = Rosette::DataStores::PhraseStatus::TRANSLATED
+
+            rosette_config.datastore.add_or_update_commit_log(
+              repo_config.name, commit_log.commit_id, nil, status
+            )
+
+            repo_config.locales.each do |locale|
+              rosette_config.datastore.add_or_update_commit_log_locale(
+                commit_log.commit_id, locale.code, 0
+              )
+            end
           end
         end
 
