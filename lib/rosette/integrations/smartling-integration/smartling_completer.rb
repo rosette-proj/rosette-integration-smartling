@@ -174,7 +174,12 @@ module Rosette
             list = get_file_list(locale_code, counter)
 
             while list.size > 0
-              list.each(&block)
+              list.each do |file|
+                if file.repo_name == repo_config.name
+                  yield file
+                end
+              end
+
               logger.info("Grabbing file list for locale #{locale_code} with offset #{counter}")
               list = get_file_list(locale_code, counter + 1)
               logger.info("Done grabbing file list for locale #{locale_code} with offset #{counter}")
