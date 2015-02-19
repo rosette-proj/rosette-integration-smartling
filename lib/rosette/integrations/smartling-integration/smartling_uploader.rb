@@ -92,13 +92,30 @@ module Rosette
             serializer = serializer_const.new(file, repo_config.source_locale)
             serializer.write_raw(integration_config.configuration.directives + "\n")
 
-            phrases.each do |phrase|
-              serializer.write_key_value(phrase.index_value, phrase.key)
-            end
-
+            write_phrases(serializer)
             serializer.flush
 
             yield file
+          end
+        end
+
+        def write_phrases(serializer)
+          if phrases.is_a?(Hash)
+            write_phrase_hash(serializer)
+          else
+            write_phrase_array(serializer)
+          end
+        end
+
+        def write_phrase_hash(serializer)
+          phrases.each do |key, val|
+            serializer.write_key_value(key, val)
+          end
+        end
+
+        def write_phrase_array(serializer)
+          phrases.each do |phrase|
+            serializer.write_key_value(phrase.index_value, phrase.key)
           end
         end
 
