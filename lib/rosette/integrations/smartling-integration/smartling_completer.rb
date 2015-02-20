@@ -175,9 +175,7 @@ module Rosette
 
             while list.size > 0
               list.each do |file|
-                if file.repo_name == repo_config.name
-                  yield file
-                end
+                yield(file) if file.repo_name == repo_config.name
               end
 
               logger.info("Grabbing file list for locale #{locale_code} with offset #{counter}")
