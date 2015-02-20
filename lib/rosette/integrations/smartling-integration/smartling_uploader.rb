@@ -41,7 +41,7 @@ module Rosette
         end
 
         def upload
-          Retrier.retry(times: 3) do
+          retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
             file_for_upload do |tmp_file|
               smartling_api.upload(
                 tmp_file.path,
@@ -51,7 +51,13 @@ module Rosette
                 }
               )
             end
-          end.on_error(Exception).execute
+          end
+
+          retrier
+            .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
+            .on_error(RuntimeError, message: /VALIDATION_ERROR/, backoff: true)
+            .on_error(Exception)
+            .execute
         end
 
         def destination_file_uri
@@ -86,13 +92,30 @@ module Rosette
             serializer = serializer_const.new(file, repo_config.source_locale)
             serializer.write_raw(integration_config.configuration.directives + "\n")
 
-            phrases.each do |phrase|
-              serializer.write_key_value(phrase.index_value, phrase.key)
-            end
-
+            write_phrases(serializer)
             serializer.flush
 
             yield file
+          end
+        end
+
+        def write_phrases(serializer)
+          if phrases.is_a?(Hash)
+            write_phrase_hash(serializer)
+          else
+            write_phrase_array(serializer)
+          end
+        end
+
+        def write_phrase_hash(serializer)
+          phrases.each do |key, val|
+            serializer.write_key_value(key, val)
+          end
+        end
+
+        def write_phrase_array(serializer)
+          phrases.each do |phrase|
+            serializer.write_key_value(phrase.index_value, phrase.key)
           end
         end
 

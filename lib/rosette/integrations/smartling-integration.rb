@@ -7,15 +7,17 @@ module Rosette
   module Integrations
 
     class SmartlingIntegration < Integration
-      autoload :SmartlingApi,       'rosette/integrations/smartling-integration/smartling_api'
-      autoload :SmartlingPusher,    'rosette/integrations/smartling-integration/smartling_puller'
-      autoload :SmartlingPuller,    'rosette/integrations/smartling-integration/smartling_pusher'
-      autoload :SmartlingUploader,  'rosette/integrations/smartling-integration/smartling_uploader'
-      autoload :SmartlingCompleter, 'rosette/integrations/smartling-integration/smartling_completer'
-      autoload :SmartlingFile,      'rosette/integrations/smartling-integration/smartling_file'
-      autoload :SmartlingTmpFile,   'rosette/integrations/smartling-integration/smartling_tmp_file'
-      autoload :Retrier,            'rosette/integrations/smartling-integration/retrier'
-      autoload :Configurator,       'rosette/integrations/smartling-integration/configurator'
+      autoload :SmartlingApi,             'rosette/integrations/smartling-integration/smartling_api'
+      autoload :SmartlingPusher,          'rosette/integrations/smartling-integration/smartling_puller'
+      autoload :SmartlingPuller,          'rosette/integrations/smartling-integration/smartling_pusher'
+      autoload :SmartlingUploader,        'rosette/integrations/smartling-integration/smartling_uploader'
+      autoload :SmartlingDownloader,      'rosette/integrations/smartling-integration/smartling_downloader'
+      autoload :SmartlingCompleter,       'rosette/integrations/smartling-integration/smartling_completer'
+      autoload :SmartlingFile,            'rosette/integrations/smartling-integration/smartling_file'
+      autoload :TranslationMemory,        'rosette/integrations/smartling-integration/translation_memory'
+      autoload :TranslationMemoryBuilder, 'rosette/integrations/smartling-integration/translation_memory_builder'
+      autoload :Retrier,                  'rosette/integrations/smartling-integration/retrier'
+      autoload :Configurator,             'rosette/integrations/smartling-integration/configurator'
 
       def self.configure
         config = Configurator.new

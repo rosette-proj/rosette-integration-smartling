@@ -62,6 +62,32 @@ module Rosette
         end
 
         def update_logs(locales_map)
+          status = if all_locales_are_complete?(locales_map)
+            Rosette::DataStores::PhraseStatus::TRANSLATED
+          else
+            Rosette::DataStores::PhraseStatus::PENDING
+          end
+
+          commit_id = derive_commit_id_from(locales_map)
+
+          if commit_id
+            rosette_config.datastore.add_or_update_commit_log(
+              repo_config.name, commit_id, nil, status
+            )
+
+            update_locale_logs(locales_map)
+          end
+        end
+
+        def derive_commit_id_from(locales_map)
+          repo_config.locales.each do |locale|
+            if file = locales_map[locale.code]
+              return file.commit_id
+            end
+          end
+        end
+
+        def update_locale_logs(locales_map)
           locales_map.each_pair do |locale, file|
             rosette_config.datastore.add_or_update_commit_log_locale(
               file.commit_id, locale, file.translated_count
@@ -150,7 +176,10 @@ module Rosette
             list = get_file_list(locale_code, counter)
 
             while list.size > 0
-              list.each(&block)
+              list.each do |file|
+                yield(file) if file.repo_name == repo_config.name
+              end
+
               logger.info("Grabbing file list for locale #{locale_code} with offset #{counter}")
               list = get_file_list(locale_code, counter + 1)
               logger.info("Done grabbing file list for locale #{locale_code} with offset #{counter}")

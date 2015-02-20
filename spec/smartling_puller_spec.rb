@@ -39,6 +39,29 @@ describe SmartlingIntegration::SmartlingPuller do
       .set_thread_pool_size(0)
   end
 
+  let(:phrase) do
+    InMemoryDataStore::Phrase.create(
+      repo_name: repo_name,
+      commit_id: commit_id,
+      meta_key: 'phrase',
+      key: "I'm a little teapot",
+      file: 'foo.txt'
+    )
+  end
+
+  let(:translation_memory_hash) do
+    locales.each_with_object({}) do |locale, ret|
+      ret[locale] ||= {}
+      ret[locale][phrase.meta_key] = phrase
+    end
+  end
+
+  let(:translation_memory) do
+    SmartlingIntegration::TranslationMemory.new(
+      translation_memory_hash
+    )
+  end
+
   before(:each) do
     repo.create_file('foo.txt') do |f|
       f.write("en:\n  phrase: I'm a little teapot\n")
@@ -55,22 +78,19 @@ describe SmartlingIntegration::SmartlingPuller do
       )
     end
 
-    InMemoryDataStore::Phrase.create(
-      repo_name: repo_name,
-      commit_id: commit_id,
-      meta_key: 'phrase',
-      key: "I'm a little teapot",
-      file: 'foo.txt'
-    )
-
     InMemoryDataStore::CommitLog.create(
       repo_name: repo_name,
       commit_id: commit_id,
-      status: 'PENDING'
+      status: 'PENDING',
+      phrase_count: 1
     )
 
     integration_config.smartling_api.instance_variable_set(
       :'@api', smartling_api_base
+    )
+
+    allow(puller).to(
+      receive(:build_translation_memory).and_return(translation_memory)
     )
   end
 
@@ -78,81 +98,42 @@ describe SmartlingIntegration::SmartlingPuller do
     repo.unlink
   end
 
-  it "doesn't change the commit log status if the file isn't fully translated" do
-    expect(smartling_api_base).to(
-      receive(:upload).and_return({ 'stringCount' => 1 })
-    )
-
-    locales.each do |locale|
-      expect(smartling_api_base).to(
-        receive(:status)
-          .with(file_uri, locale: locale)
-          .and_return(
-            create_file_entry(
-              'fileUri' => file_uri,
-              'stringCount' => 1,
-              'completedStringCount' => 0
-            )
-          )
-      )
-
-      expect(smartling_api_base).to(
-        receive(:download)
-          .with(file_uri, locale: locale)
-          .and_return("es-ES:\n  phrase: I'm in #{locale}\n")
-      )
-    end
-
-    expect(smartling_api_base).to receive(:delete).with(file_uri)
-    puller.pull
-
-    commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
-      entry.commit_id == commit_id && entry.repo_name == repo_name
-    end
-
-    expect(commit_log_entry.status).to eq('PENDING')
-  end
-
-  it 'uploads strings and downloads translations for each locale' do
-    expect(smartling_api_base).to(
-      receive(:upload).and_return({ 'stringCount' => 1 })
-    )
-
-    locales.each do |locale|
-      expect(smartling_api_base).to(
-        receive(:status)
-          .with(file_uri, locale: locale)
-          .and_return(
-            create_file_entry(
-              'fileUri' => file_uri,
-              'stringCount' => 1,
-              'completedStringCount' => 1
-            )
-          )
-      )
-
-      expect(smartling_api_base).to(
-        receive(:download)
-          .with(file_uri, locale: locale)
-          .and_return("es-ES:\n  phrase: I'm in #{locale}\n")
-      )
-    end
-
-    expect(smartling_api_base).to receive(:delete).with(file_uri)
+  it 'pulls strings for each pending commit' do
     puller.pull
 
     locales.each do |locale|
       trans = InMemoryDataStore::Translation.find { |trans| trans.locale == locale }
       expect(trans.phrase.key).to eq("I'm a little teapot")
       expect(trans.phrase.meta_key).to eq('phrase')
-      expect(trans.translation).to eq("I'm in #{locale}")
+      expect(trans.translation).to eq("I'm a little teapot")
       expect(trans.locale).to eq(locale)
+
+      locale_entry = InMemoryDataStore::CommitLogLocale.find do |entry|
+        entry.commit_id == commit_id && locale == locale
+      end
+
+      expect(locale_entry).to_not be_nil
     end
 
     commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
       entry.commit_id == commit_id && entry.repo_name == repo_name
     end
+  end
 
-    expect(commit_log_entry.status).to eq('TRANSLATED')
+  context 'with an empty translation memory' do
+    let(:translation_memory_hash) { {} }
+
+    it 'marks the commit as translated' do
+      commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
+        entry.commit_id == commit_id && entry.repo_name == repo_name
+      end
+
+      commit_log_entry.attributes[:phrase_count] = 0
+      puller.pull
+
+      expect(commit_log_entry.status).to eq(
+        Rosette::DataStores::PhraseStatus::TRANSLATED
+      )
+    end
   end
 end

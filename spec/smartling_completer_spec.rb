@@ -54,6 +54,8 @@ describe SmartlingIntegration::SmartlingCompleter do
 
   describe '#complete' do
     it 'deletes files that are complete in every locale' do
+      complete_file_list = create_file_list(complete_files)
+
       expect(smartling_api_base).to(
         receive(:list)
           .with(locale: 'ko-KR', offset: 0, limit: 100)
@@ -71,9 +73,7 @@ describe SmartlingIntegration::SmartlingCompleter do
       expect(smartling_api_base).to(
         receive(:list)
           .with(locale: 'ja-JP', offset: 0, limit: 100)
-          .and_return(
-            create_file_list(complete_files)
-          )
+          .and_return(complete_file_list)
       )
 
       expect(smartling_api_base).to(
@@ -88,6 +88,17 @@ describe SmartlingIntegration::SmartlingCompleter do
       end
 
       completer.complete
+
+      commit_id = SmartlingIntegration::SmartlingFile
+        .list_from_api_response(complete_file_list)
+        .first
+        .commit_id
+
+      commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
+        entry.commit_id == commit_id && entry.repo_name == repo_name
+      end
+
+      expect(commit_log_entry.status).to eq('TRANSLATED')
     end
   end
 end

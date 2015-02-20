@@ -56,15 +56,16 @@ module Rosette
         private
 
         def pull_synchronously
-          status = status = Rosette::DataStores::PhraseStatus::PENDING
+          status = Rosette::DataStores::PhraseStatus::PENDING
           datastore = rosette_config.datastore
+          tm = build_translation_memory
 
           pending_count = datastore.commit_log_with_status_count(
             repo_config.name, status
           )
 
           datastore.each_commit_log_with_status(repo_config.name, status).with_index do |commit_log, idx|
-            pull_commit(commit_log.commit_id)
+            pull_commit(tm, commit_log)
             logger.info(
               "#{repo_config.name}: #{idx} of #{pending_count} pulled"
             )
@@ -73,15 +74,16 @@ module Rosette
 
         def pull_asynchronously
           pool = Concurrent::FixedThreadPool.new(thread_pool_size)
-          status = status = Rosette::DataStores::PhraseStatus::PENDING
+          status = Rosette::DataStores::PhraseStatus::PENDING
           datastore = rosette_config.datastore
+          tm = build_translation_memory
 
           pending_count = datastore.commit_log_with_status_count(
             repo_config.name, status
           )
 
           datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
-            pool << Proc.new { pull_commit(commit_log.commit_id) }
+            pool << Proc.new { pull_commit(tm, commit_log) }
           end
 
           drain_pool(pool, pending_count)
@@ -102,94 +104,72 @@ module Rosette
           end
         end
 
-        def pull_commit(commit_id)
-          rev_commit = repo_config.repo.get_rev_commit(commit_id)
-          phrases = phrases_for(rev_commit.getId.name)
-          file_name = rev_commit.getId.name
-          uploader = build_uploader(phrases, file_name)
+        def pull_commit(tm, commit_log)
+          commit_id = commit_log.commit_id
+          phrases = phrases_for(commit_id)
+          commit_ids = commit_ids_from(phrases)
 
           begin
-            # avoid uploading a file with no phrases (smartling doesn't like that)
-            if phrases.size > 0
-              sync_commit(uploader, rev_commit.getId.name)
-            end
-
-            update_commit_log(uploader, rev_commit.getId.name)
+            sync_commit(tm, phrases, commit_ids)
+            update_logs_if_zero_phrases(commit_log)
           rescue => e
             # report error but keep pulling the rest of the commits
             rosette_config.error_reporter.report_error(e, {
-              commit_id: commit_id, file_name: file_name
+              commit_id: commit_id
             })
-          ensure
-            cleanup(uploader)
           end
         end
 
-        def sync_commit(uploader, commit_id)
-          uploader.upload
+        def update_logs_if_zero_phrases(commit_log)
+          if commit_log.phrase_count == 0
+            status = Rosette::DataStores::PhraseStatus::TRANSLATED
 
-          repo_config.locales.each do |locale|
-            download(uploader, locale, commit_id)
-          end
-        end
+            rosette_config.datastore.add_or_update_commit_log(
+              repo_config.name, commit_log.commit_id, nil, status
+            )
 
-        def cleanup(uploader)
-          delete_file(uploader.destination_file_uri)
-        end
-
-        def download(uploader, locale, commit_id)
-          contents = download_file(uploader.destination_file_uri, locale)
-            .force_encoding(extractor_config.encoding)
-
-          import_translations_from(contents, locale, uploader, commit_id)
-        end
-
-        def import_translations_from(contents, locale, uploader, commit_id)
-          extractor.extract_each_from(contents) do |phrase_object|
-            begin
-              Rosette::Core::Commands::AddOrUpdateTranslationCommand.new(rosette_config)
-                .set_repo_name(repo_config.name)
-                .set_locale(locale.code)
-                .set_translation(phrase_object.key)
-                .set_refs(commit_ids_from(uploader.phrases))
-                .send("set_#{phrase_object.index_key}", phrase_object.index_value)
-                .execute
-            rescue Rosette::DataStores::Errors::PhraseNotFoundError => e
-              rosette_config.error_reporter.report_warning(
-                e, commit_id: commit_id, locale: locale
+            repo_config.locales.each do |locale|
+              rosette_config.datastore.add_or_update_commit_log_locale(
+                commit_log.commit_id, locale.code, 0
               )
             end
           end
         end
 
-        def update_commit_log(uploader, commit_id)
-          files = repo_config.locales.map do |locale|
-            file_status_for(uploader.destination_file_uri, locale)
+        def sync_commit(tm, phrases, commit_ids)
+          repo_config.locales.each do |locale|
+            phrases.each do |phrase|
+              if translation = tm.translation_for(locale, phrase.meta_key)
+                import_translation(
+                  phrase.meta_key, translation, locale, commit_ids
+                )
+              end
+            end
           end
-
-          status = if files.all?(&:complete?)
-            Rosette::DataStores::PhraseStatus::TRANSLATED
-          else
-            Rosette::DataStores::PhraseStatus::PENDING
-          end
-
-          rosette_config.datastore.add_or_update_commit_log(
-            repo_config.name, commit_id, nil, status
-          )
         end
 
-        def file_status_for(file_uri, locale)
-          retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
-            SmartlingTmpFile.from_api_response(
-              smartling_api.status(file_uri, locale: locale.code)
-            )
-          end
+        def build_translation_memory
+          TranslationMemoryBuilder.new(rosette_config)
+            .set_repo_config(repo_config)
+            .set_serializer_id(serializer_id)
+            .set_extractor_id(extractor_id)
+            .set_thread_pool_size(thread_pool_size)
+            .set_logger(logger)
+            .build
+        end
 
-          retrier
-            .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
-            .on_error(RuntimeError, message: /VALIDATION_ERROR/, backoff: true)
-            .on_error(Exception)
+        def import_translation(meta_key, translation, locale, commit_ids)
+          Rosette::Core::Commands::AddOrUpdateTranslationCommand.new(rosette_config)
+            .set_repo_name(repo_config.name)
+            .set_locale(locale.code)
+            .set_translation(translation)
+            .set_refs(commit_ids)
+            .set_meta_key(meta_key)
             .execute
+        rescue Rosette::DataStores::Errors::PhraseNotFoundError => e
+          rosette_config.error_reporter.report_warning(e, {
+            commit_id: commit_id, locale: locale
+          })
         end
 
         def commit_ids_from(phrases)
@@ -198,55 +178,11 @@ module Rosette
           end
         end
 
-        def download_file(file_uri, locale)
-          retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
-            smartling_api.download(file_uri, locale: locale.code)
-          end
-
-          retrier
-            .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
-            .on_error(RuntimeError, message: /VALIDATION_ERROR/, backoff: true)
-            .on_error(Exception)
-            .execute
-        end
-
-        def delete_file(file_uri)
-          Retrier.retry(times: 3) do
-            smartling_api.delete(file_uri)
-          end.on_error(Exception).execute
-        end
-
-        def build_uploader(phrases, file_name)
-          SmartlingIntegration::SmartlingUploader.new(rosette_config)
-            .set_repo_config(repo_config)
-            .set_phrases(phrases)
-            .set_file_name(file_name)
-            .set_serializer_id(serializer_id)
-        end
-
         def phrases_for(commit_id)
           Rosette::Core::Commands::SnapshotCommand.new(rosette_config)
             .set_repo_name(repo_config.name)
             .set_commit_id(commit_id)
             .execute
-        end
-
-        def extractor_config
-          @extractor_config ||=
-            repo_config.get_extractor_config(extractor_id)
-        end
-
-        def extractor
-          @extractor ||= extractor_config.extractor
-        end
-
-        def integration_config
-          @integration_config ||=
-            repo_config.get_integration('smartling')
-        end
-
-        def smartling_api
-          @smartling_api ||= integration_config.smartling_api
         end
 
       end
