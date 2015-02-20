@@ -70,11 +70,13 @@ module Rosette
 
           commit_id = derive_commit_id_from(locales_map)
 
-          rosette_config.datastore.add_or_update_commit_log(
-            repo_config.name, commit_id, nil, status
-          )
+          if commit_id
+            rosette_config.datastore.add_or_update_commit_log(
+              repo_config.name, commit_id, nil, status
+            )
 
-          update_locale_logs(locales_map)
+            update_locale_logs(locales_map)
+          end
         end
 
         def derive_commit_id_from(locales_map)
