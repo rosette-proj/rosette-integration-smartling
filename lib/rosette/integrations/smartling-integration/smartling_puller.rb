@@ -114,11 +114,12 @@ module Rosette
 
         def pull_commit(tm, commit_log)
           commit_id = commit_log.commit_id
-          phrases = phrases_for(commit_id)
+          snapshot = snapshot_for(commit_id)
+          phrases = phrases_for(snapshot)
           commit_ids = commit_ids_from(phrases)
 
           begin
-            sync_commit(tm, phrases, commit_ids)
+            sync_commit(tm, snapshot, phrases, commit_ids)
             update_logs(commit_log)
           rescue => e
             # report error but keep pulling the rest of the commits
@@ -153,15 +154,23 @@ module Rosette
           end
         end
 
-        def sync_commit(tm, phrases, commit_ids)
+        def sync_commit(tm, snapshot, phrases, commit_ids)
           repo_config.locales.each do |locale|
-            phrases.each do |phrase|
-              if translation = tm.translation_for(locale, phrase.meta_key)
-                import_translation(
-                  phrase.meta_key, translation, locale, commit_ids
-                )
+            if translations_have_changed?(tm, locale, snapshot)
+              phrases.each do |phrase|
+                if translation = tm.translation_for(locale, phrase.meta_key)
+                  import_translation(
+                    phrase.meta_key, translation, locale, commit_ids
+                  )
+                end
               end
             end
+          end
+        end
+
+        def translations_have_changed?(tm, locale, snapshot)
+          rosette_config.datastore.translations_by_commits(repo_config.name, locale, snapshot).any? do |trans|
+            tm.translation_for(locale, trans.phrase.meta_key) != trans.translation
           end
         end
 
@@ -195,11 +204,15 @@ module Rosette
           end
         end
 
-        def phrases_for(commit_id)
+        def snapshot_for(commit_id)
           Rosette::Core::Commands::SnapshotCommand.new(rosette_config)
             .set_repo_name(repo_config.name)
             .set_commit_id(commit_id)
             .execute
+        end
+
+        def phrases_for(snapshot)
+          rosette_config.datastore.phrases_by_commits(repo_config.name, snapshot).to_a
         end
 
       end
