@@ -168,7 +168,7 @@ module Rosette
             .execute
         rescue Rosette::DataStores::Errors::PhraseNotFoundError => e
           rosette_config.error_reporter.report_warning(e, {
-            commit_id: commit_id, locale: locale
+            commit_ids: commit_ids, locale: locale
           })
         end
 
