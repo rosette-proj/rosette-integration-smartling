@@ -205,7 +205,7 @@ module Rosette
         end
 
         def snapshot_for(commit_id)
-          Rosette::Core::Commands::SnapshotCommand.new(rosette_config)
+          Rosette::Core::Commands::RepoSnapshotCommand.new(rosette_config)
             .set_repo_name(repo_config.name)
             .set_commit_id(commit_id)
             .execute
