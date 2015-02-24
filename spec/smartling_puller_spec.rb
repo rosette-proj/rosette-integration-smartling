@@ -118,6 +118,10 @@ describe SmartlingIntegration::SmartlingPuller do
     commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
       entry.commit_id == commit_id && entry.repo_name == repo_name
     end
+
+    expect(commit_log_entry.status).to eq(
+      Rosette::DataStores::PhraseStatus::PULLED
+    )
   end
 
   context 'with an empty translation memory' do

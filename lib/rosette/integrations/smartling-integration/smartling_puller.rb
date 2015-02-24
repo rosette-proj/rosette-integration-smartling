@@ -56,15 +56,19 @@ module Rosette
         private
 
         def pull_synchronously
-          status = Rosette::DataStores::PhraseStatus::PENDING
+          statuses = [
+            Rosette::DataStores::PhraseStatus::PENDING,
+            Rosette::DataStores::PhraseStatus::PULLED
+          ]
+
           datastore = rosette_config.datastore
           tm = build_translation_memory
 
           pending_count = datastore.commit_log_with_status_count(
-            repo_config.name, status
+            repo_config.name, statuses
           )
 
-          datastore.each_commit_log_with_status(repo_config.name, status).with_index do |commit_log, idx|
+          datastore.each_commit_log_with_status(repo_config.name, statuses).with_index do |commit_log, idx|
             pull_commit(tm, commit_log)
             logger.info(
               "#{repo_config.name}: #{idx} of #{pending_count} pulled"
@@ -73,16 +77,20 @@ module Rosette
         end
 
         def pull_asynchronously
+          statuses = [
+            Rosette::DataStores::PhraseStatus::PENDING,
+            Rosette::DataStores::PhraseStatus::PULLED
+          ]
+
           pool = Concurrent::FixedThreadPool.new(thread_pool_size)
-          status = Rosette::DataStores::PhraseStatus::PENDING
           datastore = rosette_config.datastore
           tm = build_translation_memory
 
           pending_count = datastore.commit_log_with_status_count(
-            repo_config.name, status
+            repo_config.name, statuses
           )
 
-          datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
+          datastore.each_commit_log_with_status(repo_config.name, statuses) do |commit_log|
             pool << Proc.new { pull_commit(tm, commit_log) }
           end
 
@@ -111,7 +119,7 @@ module Rosette
 
           begin
             sync_commit(tm, phrases, commit_ids)
-            update_logs_if_zero_phrases(commit_log)
+            update_logs(commit_log)
           rescue => e
             # report error but keep pulling the rest of the commits
             rosette_config.error_reporter.report_error(e, {
@@ -120,19 +128,28 @@ module Rosette
           end
         end
 
-        def update_logs_if_zero_phrases(commit_log)
+        def update_logs(commit_log)
           if commit_log.phrase_count == 0
-            status = Rosette::DataStores::PhraseStatus::TRANSLATED
-
+            update_logs_for_zero_phrases(commit_log)
+          else
+            status = Rosette::DataStores::PhraseStatus::PULLED
             rosette_config.datastore.add_or_update_commit_log(
               repo_config.name, commit_log.commit_id, nil, status
             )
+          end
+        end
 
-            repo_config.locales.each do |locale|
-              rosette_config.datastore.add_or_update_commit_log_locale(
-                commit_log.commit_id, locale.code, 0
-              )
-            end
+        def update_logs_for_zero_phrases(commit_log)
+          status = Rosette::DataStores::PhraseStatus::TRANSLATED
+
+          rosette_config.datastore.add_or_update_commit_log(
+            repo_config.name, commit_log.commit_id, nil, status
+          )
+
+          repo_config.locales.each do |locale|
+            rosette_config.datastore.add_or_update_commit_log_locale(
+              commit_log.commit_id, locale.code, 0
+            )
           end
         end
 
