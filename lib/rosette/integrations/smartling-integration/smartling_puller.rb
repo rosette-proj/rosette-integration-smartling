@@ -169,7 +169,7 @@ module Rosette
         end
 
         def translations_have_changed?(tm, locale, snapshot)
-          rosette_config.datastore.translations_by_commits(repo_config.name, locale, snapshot).any? do |trans|
+          rosette_config.datastore.translations_by_commits(repo_config.name, locale.code, snapshot).any? do |trans|
             tm.translation_for(locale, trans.phrase.meta_key) != trans.translation
           end
         end
