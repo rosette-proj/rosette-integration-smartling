@@ -62,20 +62,17 @@ module Rosette
         end
 
         def update_logs(locales_map)
-          status = if all_locales_are_complete?(locales_map)
-            Rosette::DataStores::PhraseStatus::TRANSLATED
-          else
-            Rosette::DataStores::PhraseStatus::PENDING
-          end
+          if all_locales_are_complete?(locales_map)
+            status = Rosette::DataStores::PhraseStatus::TRANSLATED
+            commit_id = derive_commit_id_from(locales_map)
 
-          commit_id = derive_commit_id_from(locales_map)
+            if commit_id
+              rosette_config.datastore.add_or_update_commit_log(
+                repo_config.name, commit_id, nil, status
+              )
 
-          if commit_id
-            rosette_config.datastore.add_or_update_commit_log(
-              repo_config.name, commit_id, nil, status
-            )
-
-            update_locale_logs(locales_map)
+              update_locale_logs(locales_map)
+            end
           end
         end
 
