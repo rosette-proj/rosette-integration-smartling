@@ -63,7 +63,7 @@ module Rosette
 
         def update_logs(locales_map)
           if all_locales_are_complete?(locales_map)
-            status = Rosette::DataStores::PhraseStatus::TRANSLATED
+            status = Rosette::DataStores::PhraseStatus::PULLED
             commit_id = derive_commit_id_from(locales_map)
 
             if commit_id

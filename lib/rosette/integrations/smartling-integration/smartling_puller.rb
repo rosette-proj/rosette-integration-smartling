@@ -58,6 +58,7 @@ module Rosette
         def pull_synchronously
           statuses = [
             Rosette::DataStores::PhraseStatus::PENDING,
+            Rosette::DataStores::PhraseStatus::PULLING,
             Rosette::DataStores::PhraseStatus::PULLED
           ]
 
@@ -79,6 +80,7 @@ module Rosette
         def pull_asynchronously
           statuses = [
             Rosette::DataStores::PhraseStatus::PENDING,
+            Rosette::DataStores::PhraseStatus::PULLING,
             Rosette::DataStores::PhraseStatus::PULLED
           ]
 
@@ -133,7 +135,13 @@ module Rosette
           if commit_log.phrase_count == 0
             update_logs_for_zero_phrases(commit_log)
           else
-            status = Rosette::DataStores::PhraseStatus::PULLED
+            status = case commit_log.status
+              when Rosette::DataStores::PhraseStatus::PULLED
+                Rosette::DataStores::PhraseStatus::TRANSLATED
+              else
+                Rosette::DataStores::PhraseStatus::PULLING
+            end
+
             rosette_config.datastore.add_or_update_commit_log(
               repo_config.name, commit_log.commit_id, nil, status
             )
