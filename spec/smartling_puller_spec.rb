@@ -30,6 +30,7 @@ describe SmartlingIntegration::SmartlingPuller do
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
   let(:integration_config) { repo_config.get_integration('smartling') }
   let(:file_uri) { "#{repo_name}/#{commit_id}.yml" }
+  let(:status) { Rosette::DataStores::PhraseStatus::PENDING }
 
   let(:puller) do
     SmartlingIntegration::SmartlingPuller.new(rosette_config)
@@ -81,7 +82,7 @@ describe SmartlingIntegration::SmartlingPuller do
     InMemoryDataStore::CommitLog.create(
       repo_name: repo_name,
       commit_id: commit_id,
-      status: 'PENDING',
+      status: status,
       phrase_count: 1
     )
 
@@ -120,14 +121,30 @@ describe SmartlingIntegration::SmartlingPuller do
     end
 
     expect(commit_log_entry.status).to eq(
-      Rosette::DataStores::PhraseStatus::PULLED
+      Rosette::DataStores::PhraseStatus::PULLING
     )
+  end
+
+  context 'with a PULLED commit' do
+    let(:status) { Rosette::DataStores::PhraseStatus::PULLED }
+
+    it 'marks commit as TRANSLATED' do
+      puller.pull
+
+      commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
+        entry.commit_id == commit_id && entry.repo_name == repo_name
+      end
+
+      expect(commit_log_entry.status).to eq(
+        Rosette::DataStores::PhraseStatus::TRANSLATED
+      )
+    end
   end
 
   context 'with an empty translation memory' do
     let(:translation_memory_hash) { {} }
 
-    it 'marks the commit as translated' do
+    it 'marks the commit as translated when it contains zero phrases' do
       commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
         entry.commit_id == commit_id && entry.repo_name == repo_name
       end

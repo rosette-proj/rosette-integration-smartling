@@ -53,7 +53,7 @@ module Rosette
           datastore = rosette_config.datastore
 
           datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
-            push_commit(commit_log.commit_id)
+            push_commit(commit_log)
           end
         end
 
@@ -67,7 +67,7 @@ module Rosette
           )
 
           datastore.each_commit_log_with_status(repo_config.name, status) do |commit_log|
-            pool << Proc.new { push_commit(commit_log.commit_id) }
+            pool << Proc.new { push_commit(commit_log) }
           end
 
           drain_pool(pool, untrans_count)
@@ -88,7 +88,8 @@ module Rosette
           end
         end
 
-        def push_commit(commit_id)
+        def push_commit(commit_log)
+          commit_id = commit_log.commit_id
           phrases = phrases_for(commit_id)
 
           if phrases.size > 0
@@ -101,12 +102,11 @@ module Rosette
             phrase_count = response['stringCount']
           end
 
-          rosette_config.datastore.add_or_update_commit_log(
-            repo_config.name, commit_id, nil,
-            Rosette::DataStores::PhraseStatus::PENDING, phrase_count
-          )
+          commit_log.push!
+          save_log(commit_log)
         rescue Java::OrgEclipseJgitErrors::MissingObjectException => ex
-          mark_commit_as_missing(commit_id)
+          commit_log.missing
+          save_log(commit_log)
 
           rosette_config.error_reporter.report_warning(ex, {
             commit_id: commit_id
@@ -117,12 +117,9 @@ module Rosette
           })
         end
 
-        def mark_commit_as_missing(commit_id)
+        def save_log(commit_log)
           rosette_config.datastore.add_or_update_commit_log(
-            repo_config.name,
-            commit_id,
-            nil,
-            Rosette::DataStores::PhraseStatus::MISSING
+            repo_config.name, commit_log.commit_id, nil, commit_log.status
           )
         end
 

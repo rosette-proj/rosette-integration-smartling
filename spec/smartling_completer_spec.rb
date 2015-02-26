@@ -42,9 +42,26 @@ describe SmartlingIntegration::SmartlingCompleter do
     end
   end
 
+  let(:commit_id) do
+    SmartlingIntegration::SmartlingFile
+      .list_from_api_response(complete_file_list)
+      .first
+      .commit_id
+  end
+
+  let(:complete_file_list) do
+    create_file_list(complete_files)
+  end
+
   before(:each) do
     integration_config.smartling_api.instance_variable_set(
       :'@api', smartling_api_base
+    )
+
+    InMemoryDataStore::CommitLog.create(
+      repo_name: repo_name,
+      commit_id: commit_id,
+      status: Rosette::DataStores::PhraseStatus::PULLING
     )
   end
 
@@ -53,9 +70,7 @@ describe SmartlingIntegration::SmartlingCompleter do
   end
 
   describe '#complete' do
-    it 'deletes files that are complete in every locale' do
-      complete_file_list = create_file_list(complete_files)
-
+    before(:each) do
       expect(smartling_api_base).to(
         receive(:list)
           .with(locale: 'ko-KR', offset: 0, limit: 100)
@@ -81,7 +96,9 @@ describe SmartlingIntegration::SmartlingCompleter do
           .with(locale: 'ja-JP', offset: 1, limit: 100)
           .and_return(create_file_list(0))
       )
+    end
 
+    it 'deletes files that are complete in every locale' do
       # should delete files that are complete in all locales
       complete_files.each do |file|
         expect(smartling_api_base).to receive(:delete).with(file['fileUri'])
@@ -89,16 +106,31 @@ describe SmartlingIntegration::SmartlingCompleter do
 
       completer.complete
 
-      commit_id = SmartlingIntegration::SmartlingFile
-        .list_from_api_response(complete_file_list)
-        .first
-        .commit_id
+      commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
+        entry.commit_id == commit_id && entry.repo_name == repo_name
+      end
+
+      expect(commit_log_entry.status).to eq(
+        Rosette::DataStores::PhraseStatus::PULLED
+      )
+    end
+
+    it 'transitions commit logs from PULLED to TRANSLATED' do
+      # should delete files that are complete in all locales
+      complete_files.each do |file|
+        expect(smartling_api_base).to receive(:delete).with(file['fileUri'])
+      end
 
       commit_log_entry = InMemoryDataStore::CommitLog.find do |entry|
         entry.commit_id == commit_id && entry.repo_name == repo_name
       end
 
-      expect(commit_log_entry.status).to eq('TRANSLATED')
+      commit_log_entry.status = Rosette::DataStores::PhraseStatus::PULLED
+      completer.complete
+
+      expect(commit_log_entry.status).to eq(
+        Rosette::DataStores::PhraseStatus::TRANSLATED
+      )
     end
   end
 end

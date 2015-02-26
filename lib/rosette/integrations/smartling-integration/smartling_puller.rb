@@ -10,6 +10,12 @@ module Rosette
 
         DEFAULT_THREAD_POOL_SIZE = 10
 
+        PULL_STATUSES = [
+          Rosette::DataStores::PhraseStatus::PENDING,
+          Rosette::DataStores::PhraseStatus::PULLING,
+          Rosette::DataStores::PhraseStatus::PULLED
+        ]
+
         attr_reader :rosette_config
         attr_reader :repo_config, :serializer_id, :extractor_id
         attr_reader :thread_pool_size, :logger
@@ -56,20 +62,14 @@ module Rosette
         private
 
         def pull_synchronously
-          statuses = [
-            Rosette::DataStores::PhraseStatus::PENDING,
-            Rosette::DataStores::PhraseStatus::PULLING,
-            Rosette::DataStores::PhraseStatus::PULLED
-          ]
-
           datastore = rosette_config.datastore
           tm = build_translation_memory
 
           pending_count = datastore.commit_log_with_status_count(
-            repo_config.name, statuses
+            repo_config.name, PULL_STATUSES
           )
 
-          datastore.each_commit_log_with_status(repo_config.name, statuses).with_index do |commit_log, idx|
+          datastore.each_commit_log_with_status(repo_config.name, PULL_STATUSES).with_index do |commit_log, idx|
             pull_commit(tm, commit_log)
             logger.info(
               "#{repo_config.name}: #{idx} of #{pending_count} pulled"
@@ -78,21 +78,15 @@ module Rosette
         end
 
         def pull_asynchronously
-          statuses = [
-            Rosette::DataStores::PhraseStatus::PENDING,
-            Rosette::DataStores::PhraseStatus::PULLING,
-            Rosette::DataStores::PhraseStatus::PULLED
-          ]
-
           pool = Concurrent::FixedThreadPool.new(thread_pool_size)
           datastore = rosette_config.datastore
           tm = build_translation_memory
 
           pending_count = datastore.commit_log_with_status_count(
-            repo_config.name, statuses
+            repo_config.name, PULL_STATUSES
           )
 
-          datastore.each_commit_log_with_status(repo_config.name, statuses) do |commit_log|
+          datastore.each_commit_log_with_status(repo_config.name, PULL_STATUSES) do |commit_log|
             pool << Proc.new { pull_commit(tm, commit_log) }
           end
 
@@ -133,33 +127,24 @@ module Rosette
 
         def update_logs(commit_log)
           if commit_log.phrase_count == 0
-            update_logs_for_zero_phrases(commit_log)
-          else
-            status = case commit_log.status
-              when Rosette::DataStores::PhraseStatus::PULLED
-                Rosette::DataStores::PhraseStatus::TRANSLATED
-              else
-                Rosette::DataStores::PhraseStatus::PULLING
-            end
+            commit_log.translate!
 
-            rosette_config.datastore.add_or_update_commit_log(
-              repo_config.name, commit_log.commit_id, nil, status
-            )
+            repo_config.locales.each do |locale|
+              rosette_config.datastore.add_or_update_commit_log_locale(
+                commit_log.commit_id, locale.code, 0
+              )
+            end
+          else
+            commit_log.pull!
           end
+
+          save_log(commit_log)
         end
 
-        def update_logs_for_zero_phrases(commit_log)
-          status = Rosette::DataStores::PhraseStatus::TRANSLATED
-
+        def save_log(commit_log)
           rosette_config.datastore.add_or_update_commit_log(
-            repo_config.name, commit_log.commit_id, nil, status
+            repo_config.name, commit_log.commit_id, nil, commit_log.status
           )
-
-          repo_config.locales.each do |locale|
-            rosette_config.datastore.add_or_update_commit_log_locale(
-              commit_log.commit_id, locale.code, 0
-            )
-          end
         end
 
         def sync_commit(tm, snapshot, phrases, commit_ids)
@@ -177,9 +162,18 @@ module Rosette
         end
 
         def translations_have_changed?(tm, locale, snapshot)
-          rosette_config.datastore.translations_by_commits(repo_config.name, locale.code, snapshot).any? do |trans|
+          counter = 0
+
+          translations = rosette_config.datastore.translations_by_commits(
+            repo_config.name, locale.code, snapshot
+          )
+
+          translations_differ = translations.any? do |trans|
+            counter += 1
             tm.translation_for(locale, trans.phrase.meta_key) != trans.translation
           end
+
+          translations_differ || counter == 0
         end
 
         def build_translation_memory
