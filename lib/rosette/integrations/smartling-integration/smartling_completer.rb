@@ -10,6 +10,12 @@ module Rosette
 
         DEFAULT_THREAD_POOL_SIZE = 10
 
+        COMPLETE_STATUSES = [
+          Rosette::DataStores::PhraseStatus::PULLING,
+          Rosette::DataStores::PhraseStatus::PULLED,
+          Rosette::DataStores::PhraseStatus::TRANSLATED
+        ]
+
         attr_reader :rosette_config, :repo_config
         attr_reader :thread_pool_size
         attr_reader :logger
@@ -62,16 +68,30 @@ module Rosette
         end
 
         def update_logs(locales_map)
-          if all_locales_are_complete?(locales_map)
-            status = Rosette::DataStores::PhraseStatus::PULLED
-            commit_id = derive_commit_id_from(locales_map)
+          commit_id = derive_commit_id_from(locales_map)
+          commit_log = find_commit_log(commit_id)
 
-            if commit_id
-              rosette_config.datastore.add_or_update_commit_log(
-                repo_config.name, commit_id, nil, status
-              )
+          if commit_log
+            commit_log.complete!
+            save_log(commit_log)
+            update_locale_logs(locales_map)
+          end
+        end
 
-              update_locale_logs(locales_map)
+        def save_log(commit_log)
+          rosette_config.datastore.add_or_update_commit_log(
+            repo_config.name, commit_log.commit_id, nil, commit_log.status
+          )
+        end
+
+        def find_commit_log(commit_id)
+          if commit_id
+            commit_logs = rosette_config.datastore.each_commit_log_with_status(
+              repo_config.name, COMPLETE_STATUSES
+            )
+
+            commit_logs.find do |commit_log|
+              commit_log.commit_id == commit_id
             end
           end
         end
