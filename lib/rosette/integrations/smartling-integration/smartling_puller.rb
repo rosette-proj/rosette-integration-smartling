@@ -135,7 +135,7 @@ module Rosette
               )
             end
           else
-            commit_log.pull!
+            commit_log.pull
           end
 
           save_log(commit_log)

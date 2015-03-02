@@ -102,7 +102,7 @@ module Rosette
             phrase_count = response['stringCount']
           end
 
-          commit_log.push!
+          commit_log.push
           save_log(commit_log)
         rescue Java::OrgEclipseJgitErrors::MissingObjectException => ex
           commit_log.missing

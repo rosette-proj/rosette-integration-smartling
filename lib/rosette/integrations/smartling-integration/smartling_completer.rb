@@ -72,7 +72,10 @@ module Rosette
           commit_log = find_commit_log(commit_id)
 
           if commit_log
-            commit_log.complete!
+            commit_log.complete(
+              fully_translated: all_locales_are_complete?(locales_map)
+            )
+
             save_log(commit_log)
             update_locale_logs(locales_map)
           end
