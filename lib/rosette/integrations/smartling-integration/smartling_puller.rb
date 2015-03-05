@@ -115,7 +115,10 @@ module Rosette
           commit_ids = commit_ids_from(phrases)
 
           begin
-            sync_commit(tm, snapshot, phrases, commit_ids)
+            repo_config.locales.each do |locale|
+              sync_commit(tm, commit_log, locale, phrases, commit_ids)
+            end
+
             update_logs(commit_log)
           rescue => e
             # report error but keep pulling the rest of the commits
@@ -147,30 +150,37 @@ module Rosette
           )
         end
 
-        def sync_commit(tm, snapshot, phrases, commit_ids)
-          repo_config.locales.each do |locale|
-            # if translations_have_changed?(tm, locale, snapshot)
-              phrases.each do |phrase|
-                if translation = tm.translation_for(locale, phrase.meta_key)
-                  import_translation(
-                    phrase.meta_key, translation, locale, commit_ids
-                  )
-                end
+        def sync_commit(tm, commit_log, locale, phrases, commit_ids)
+          if should_import_translations?(tm, locale, commit_log)
+            phrases.each do |phrase|
+              if translation = tm.translation_for(locale, phrase.meta_key)
+                import_translation(
+                  phrase.meta_key, translation, locale, commit_ids
+                )
               end
-            # end
+            end
+
+            rosette_config.cache.write(
+              tm_checksum_key(locale), tm.checksum_for(locale)
+            )
           end
         end
 
-        def translations_have_changed?(tm, locale, snapshot)
-          translations = rosette_config.datastore.translations_by_commits(
-            repo_config.name, locale.code, snapshot
-          )
+        def should_import_translations?(tm, locale, commit_log)
+          translations_have_changed?(tm, locale) ||
+            commit_log.status == Rosette::DataStores::PhraseStatus::PENDING
+        end
 
-          translations_differ = translations.any? do |trans|
-            tm.translation_for(locale, trans.phrase.meta_key) != trans.translation
+        def translations_have_changed?(tm, locale)
+          if checksum = rosette_config.cache.read(tm_checksum_key(locale))
+            checksum != tm.checksum_for(locale)
+          else
+            true
           end
+        end
 
-          translations_differ
+        def tm_checksum_key(locale)
+          "#{repo_config.name}/tm/#{locale.code}/checksum"
         end
 
         def build_translation_memory
