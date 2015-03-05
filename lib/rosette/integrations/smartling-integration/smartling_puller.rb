@@ -162,18 +162,15 @@ module Rosette
         end
 
         def translations_have_changed?(tm, locale, snapshot)
-          counter = 0
-
           translations = rosette_config.datastore.translations_by_commits(
             repo_config.name, locale.code, snapshot
           )
 
           translations_differ = translations.any? do |trans|
-            counter += 1
             tm.translation_for(locale, trans.phrase.meta_key) != trans.translation
           end
 
-          translations_differ || counter == 0
+          translations_differ
         end
 
         def build_translation_memory
