@@ -149,7 +149,7 @@ module Rosette
 
         def sync_commit(tm, snapshot, phrases, commit_ids)
           repo_config.locales.each do |locale|
-            if translations_have_changed?(tm, locale, snapshot)
+            # if translations_have_changed?(tm, locale, snapshot)
               phrases.each do |phrase|
                 if translation = tm.translation_for(locale, phrase.meta_key)
                   import_translation(
@@ -157,7 +157,7 @@ module Rosette
                   )
                 end
               end
-            end
+            # end
           end
         end
 
