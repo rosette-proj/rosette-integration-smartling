@@ -75,6 +75,8 @@ module Rosette
               "#{repo_config.name}: #{idx} of #{pending_count} pulled"
             )
           end
+
+          write_checksums(tm)
         end
 
         def pull_asynchronously
@@ -91,6 +93,7 @@ module Rosette
           end
 
           drain_pool(pool, pending_count)
+          write_checksums(tm)
         end
 
         def drain_pool(pool, total)
@@ -105,6 +108,14 @@ module Rosette
             end
 
             last_completed_count = current_completed_count
+          end
+        end
+
+        def write_checksums(tm)
+          repo_config.locales.each do |locale|
+            rosette_config.cache.write(
+              tm_checksum_key(locale), tm.checksum_for(locale)
+            )
           end
         end
 
@@ -159,10 +170,6 @@ module Rosette
                 )
               end
             end
-
-            rosette_config.cache.write(
-              tm_checksum_key(locale), tm.checksum_for(locale)
-            )
           end
         end
 
