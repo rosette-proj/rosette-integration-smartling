@@ -40,6 +40,14 @@ module Rosette
         @smartling_api ||=
           SmartlingApi.new(configuration.api_options)
       end
+
+      def smartling_memory_api
+        @smartling_memory_api ||= if configuration.memory_api_options
+          SmartlingApi.new(configuration.memory_api_options)
+        else
+          smartling_api
+        end
+      end
     end
 
   end

@@ -40,6 +40,12 @@ module Rosette
           self
         end
 
+        # if this isn't set, uses the default api
+        def set_smartling_api(smartling_api)
+          @smartling_api = smartling_api
+          self
+        end
+
         def upload
           retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
             file_for_upload do |tmp_file|

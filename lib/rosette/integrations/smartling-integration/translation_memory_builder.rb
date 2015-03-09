@@ -191,10 +191,11 @@ module Rosette
             .set_phrases(phrases)
             .set_file_name('memory')
             .set_serializer_id(serializer_id)
+            .set_smartling_api(smartling_api)
         end
 
         def smartling_api
-          repo_config.get_integration('smartling').smartling_api
+          repo_config.get_integration('smartling').smartling_memory_api
         end
 
         def datastore

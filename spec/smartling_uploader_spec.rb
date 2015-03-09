@@ -72,6 +72,17 @@ describe SmartlingIntegration::SmartlingUploader do
       uploader.upload
     end
 
+    it 'uses the given smartling api instead of the one in the integration config' do
+      other_api_base = double(:other_api)
+      other_api = SmartlingIntegration::SmartlingApi.new
+      other_api.instance_variable_set(:'@api', other_api_base)
+      uploader.set_smartling_api(other_api)
+
+      expect(other_api).to receive(:upload)
+      expect(smartling_api_base).to_not receive(:upload)
+      uploader.upload
+    end
+
     context 'with an xml/android serializer' do
       before(:each) do
         repo_config.add_serializer('android', format: 'xml/android')
