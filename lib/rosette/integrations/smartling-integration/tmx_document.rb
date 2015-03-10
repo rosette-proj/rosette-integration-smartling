@@ -11,6 +11,19 @@ module Rosette
       # and looking for individual elements with xpath. We do sacrifice a bit
       # of code readability, but the document really isn't that complicated.
       class TmxDocument < Nokogiri::XML::SAX::Document
+        UNIT_TAG             = 'tu'
+        TRANSLATION_UNIT_TAG = 'tuv'
+        PROPERTY_TAG         = 'prop'
+        SEGMENT_TAG          = 'seg'
+
+        TUID_ATTR            = 'tuid'
+        TYPE_ATTR            = 'type'
+        LANG_ATTR            = 'xml:lang'
+        SEGMENT_ID_ATTR      = 'x-segment-id'
+        VARIANT_ATTR         = 'smartling_string_variant'
+
+        class MissingTranslationUnitError < StandardError; end
+
         attr_reader :locale_code, :proc
 
         def initialize(locale_code, &block)
@@ -24,14 +37,14 @@ module Rosette
 
         def start_element(name, attrs = [])
           case name
-            when 'tu'
-              @tuid = get_attr('tuid', attrs)
-            when 'prop'
-              @prop_type = get_attr('type', attrs)
+            when UNIT_TAG
+              @tuid = get_attr(TUID_ATTR, attrs)
+            when PROPERTY_TAG
+              @prop_type = get_attr(TYPE_ATTR, attrs)
               @capture_prop = true
-            when 'tuv'
-              @lang = get_attr('xml:lang', attrs)
-            when 'seg'
+            when TRANSLATION_UNIT_TAG
+              @lang = get_attr(LANG_ATTR, attrs)
+            when SEGMENT_TAG
               @capture_key = (@lang == locale_code)
           end
         end
