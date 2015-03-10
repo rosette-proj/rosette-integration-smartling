@@ -77,7 +77,7 @@ describe SmartlingIntegration::TmxDocument do
   context 'with a different locale' do
     let(:locale_code) { 'fr-FR' }
 
-    it 'does not return strings in the wrong locale' do
+    it "raises an error if one of the translation units doesn't contain an entry for the locale" do
       tmx_contents = %Q{
         <tmx version="1.4">
           <body>
@@ -90,8 +90,9 @@ describe SmartlingIntegration::TmxDocument do
         </tmx>
       }
 
-      parser.parse(tmx_contents)
-      expect(result_hash).to eq({})
+      expect { parser.parse(tmx_contents) }.to raise_error(
+        SmartlingIntegration::TmxDocument::MissingTranslationUnitError
+      )
     end
   end
 end

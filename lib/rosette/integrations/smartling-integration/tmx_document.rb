@@ -31,6 +31,7 @@ module Rosette
           @locale_code = locale_code
           @capture_key = false
           @capture_prop = false
+          @lang_found = false
           @props = {}
           @key = nil
         end
@@ -46,17 +47,24 @@ module Rosette
               @lang = get_attr(LANG_ATTR, attrs)
             when SEGMENT_TAG
               @capture_key = (@lang == locale_code)
+              @lang_found = (@lang == locale_code)
           end
         end
 
         def end_element(name)
           case name
-            when 'tu'
-              if @props['x-segment-id'] == '0' && @key
-                meta_key = @props['smartling_string_variant']
+            when UNIT_TAG
+              unless @lang_found
+                raise MissingTranslationUnitError,
+                  "Couldn't find an entry for #{locale_code} in one of the translation units."
+              end
+
+              if @props[SEGMENT_ID_ATTR] == '0' && @key
+                meta_key = @props[VARIANT_ATTR]
                 proc.call(meta_key || @tuid, @key)
                 @props.clear
                 @key = nil
+                @lang_found = false
               end
           end
         end
