@@ -14,6 +14,7 @@ module Rosette
       autoload :SmartlingDownloader,      'rosette/integrations/smartling-integration/smartling_downloader'
       autoload :SmartlingCompleter,       'rosette/integrations/smartling-integration/smartling_completer'
       autoload :SmartlingFile,            'rosette/integrations/smartling-integration/smartling_file'
+      autoload :TmxDocument,              'rosette/integrations/smartling-integration/tmx_document'
       autoload :TranslationMemory,        'rosette/integrations/smartling-integration/translation_memory'
       autoload :TranslationMemoryBuilder, 'rosette/integrations/smartling-integration/translation_memory_builder'
       autoload :Retrier,                  'rosette/integrations/smartling-integration/retrier'

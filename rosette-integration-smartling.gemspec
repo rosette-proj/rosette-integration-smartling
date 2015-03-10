@@ -13,6 +13,8 @@ Gem::Specification.new do |s|
   s.platform = Gem::Platform::RUBY
   s.has_rdoc = true
 
+  s.add_dependency 'nokogiri', '1.6.0'
+
   s.require_path = 'lib'
   s.files = Dir["{lib,spec}/**/*", "Gemfile", "History.txt", "README.md", "Rakefile", "rosette-integration-smartling.gemspec"]
 end
