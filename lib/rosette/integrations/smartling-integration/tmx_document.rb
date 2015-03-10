@@ -1,5 +1,7 @@
 # encoding: UTF-8
 
+require 'nokogiri'
+
 module Rosette
   module Integrations
     class SmartlingIntegration < Integration
@@ -17,6 +19,7 @@ module Rosette
           @capture_key = false
           @capture_prop = false
           @props = {}
+          @key = nil
         end
 
         def start_element(name, attrs = [])
@@ -36,10 +39,11 @@ module Rosette
         def end_element(name)
           case name
             when 'tu'
-              if @props['x-segment-id'] == '0'
+              if @props['x-segment-id'] == '0' && @key
                 meta_key = @props['smartling_string_variant']
                 proc.call(meta_key || @tuid, @key)
                 @props.clear
+                @key = nil
               end
           end
         end
