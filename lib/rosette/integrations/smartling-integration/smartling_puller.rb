@@ -125,18 +125,19 @@ module Rosette
           phrases = phrases_for(snapshot)
           commit_ids = commit_ids_from(phrases)
 
-          begin
-            repo_config.locales.each do |locale|
-              sync_commit(tm, commit_log, locale, phrases, commit_ids)
-            end
-
-            update_logs(commit_log)
-          rescue => e
-            # report error but keep pulling the rest of the commits
-            rosette_config.error_reporter.report_error(e, {
-              commit_id: commit_id
-            })
+          repo_config.locales.each do |locale|
+            sync_commit(tm, commit_log, locale, phrases, commit_ids)
           end
+
+          update_logs(commit_log)
+        rescue Java::OrgEclipseJgitErrors::MissingObjectException => e
+          commit_log.missing
+          save_log(commit_log)
+        rescue => e
+          # report error but keep pulling the rest of the commits
+          rosette_config.error_reporter.report_error(e, {
+            commit_id: commit_id
+          })
         end
 
         def update_logs(commit_log)
@@ -164,11 +165,23 @@ module Rosette
         def sync_commit(tm, commit_log, locale, phrases, commit_ids)
           if should_import_translations?(tm, locale, commit_log)
             phrases.each do |phrase|
-              if translation = tm.translation_for(locale, phrase.meta_key)
+              sync_phrase(phrase, tm, commit_log, locale, commit_ids)
+            end
+          end
+        end
+
+        def sync_phrase(phrase, tm, commit_log, locale, commit_ids)
+          if unit = tm.translation_for(locale, phrase.meta_key)
+            begin
+              if translation = tm.resolve(unit, locale, phrase)
                 import_translation(
                   phrase.meta_key, translation, locale, commit_ids
                 )
               end
+            rescue PlaceholderMismatchError => e
+              rosette_config.error_reporter.report_error(e, {
+                commit_id: commit_log.commit_id
+              })
             end
           end
         end
@@ -193,8 +206,6 @@ module Rosette
         def build_translation_memory
           TranslationMemoryBuilder.new(rosette_config)
             .set_repo_config(repo_config)
-            .set_serializer_id(serializer_id)
-            .set_extractor_id(extractor_id)
             .set_thread_pool_size(thread_pool_size)
             .set_logger(logger)
             .build
