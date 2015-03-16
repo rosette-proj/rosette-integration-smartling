@@ -22,14 +22,16 @@ module Rosette
           @checksum_mutex = Mutex.new
         end
 
-        def translation_for(locale, meta_key)
-          if is_potential_plural?(meta_key)
-            if plural_trans = find_plural_translation_for(locale, meta_key)
-              return plural_trans
-            end
+        def translation_for(locale, phrase)
+          if is_potential_plural?(phrase.meta_key)
+            unit = find_plural_translation_for(locale, phrase.meta_key)
           end
 
-          all_translations_for(locale).fetch(meta_key, {}).first
+          unit ||= all_translations_for(locale)
+            .fetch(phrase.meta_key, {})
+            .first
+
+          resolve(unit, locale, phrase) if unit
         end
 
         def checksum_for(locale)
@@ -41,6 +43,8 @@ module Rosette
             end
           end
         end
+
+        private
 
         # resolves placeholders and paired tags, returns a string
         def resolve(unit, locale, phrase)
@@ -59,8 +63,6 @@ module Rosette
             end
           end
         end
-
-        private
 
         def digest_locale(locale, digest)
           translations = all_translations_for(locale)
