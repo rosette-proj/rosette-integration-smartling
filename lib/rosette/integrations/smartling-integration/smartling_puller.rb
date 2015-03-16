@@ -171,19 +171,15 @@ module Rosette
         end
 
         def sync_phrase(phrase, tm, commit_log, locale, commit_ids)
-          if unit = tm.translation_for(locale, phrase.meta_key)
-            begin
-              if translation = tm.resolve(unit, locale, phrase)
-                import_translation(
-                  phrase.meta_key, translation, locale, commit_ids
-                )
-              end
-            rescue PlaceholderMismatchError => e
-              rosette_config.error_reporter.report_error(e, {
-                commit_id: commit_log.commit_id
-              })
-            end
+          if translation = tm.translation_for(locale, phrase)
+            import_translation(
+              phrase.meta_key, translation, locale, commit_ids
+            )
           end
+        rescue PlaceholderMismatchError => e
+          rosette_config.error_reporter.report_error(e, {
+            commit_id: commit_log.commit_id
+          })
         end
 
         def should_import_translations?(tm, locale, commit_log)
