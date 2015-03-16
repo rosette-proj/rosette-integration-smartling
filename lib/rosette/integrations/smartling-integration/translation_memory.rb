@@ -3,6 +3,8 @@
 require 'digest/sha1'
 require 'thread'
 
+require 'pry-nav'
+
 module Rosette
   module Integrations
     class SmartlingIntegration < Integration
@@ -51,16 +53,33 @@ module Rosette
           if variant = find_variant(unit, locale)
             placeholders = associate_placeholders(variant, phrase)
 
-            variant.elements.each_with_object('') do |el, ret|
-              ret << case el
-                when String
-                  el
-                when TmxParser::Placeholder
-                  placeholders[el.text]
-                else
-                  el.text
-              end
+            if placeholders.size > 0
+              resolve_with_placeholders(variant, placeholders)
+            else
+              resolve_without_placeholders(variant)
             end
+          end
+        end
+
+        def resolve_with_placeholders(variant, placeholders)
+          variant.elements.each_with_object('') do |el, ret|
+            ret << case el
+              when TmxParser::Placeholder
+                placeholders[el.text]
+              else
+                str = el.respond_to?(:text) ? el.text : el
+                str.dup.tap do |text|
+                  placeholders.each do |source, target|
+                    text.sub!(source, target)
+                  end
+                end
+            end
+          end
+        end
+
+        def resolve_without_placeholders(variant)
+          variant.elements.each_with_object('') do |el, ret|
+            ret << el.respond_to?(:text) ? el.text : el
           end
         end
 
@@ -126,7 +145,13 @@ module Rosette
         def associate_placeholders(variant, phrase)
           named_placeholders = phrase.key.scan(placeholder_regex)
           smartling_placeholders = variant.elements.each_with_object([]) do |el, ret|
-            ret << el.text if el.is_a?(TmxParser::Placeholder)
+            case el
+              when TmxParser::Placeholder
+                ret << el.text
+              else
+                str = el.respond_to?(:text) ? el.text : el
+                ret.concat(find_inline_placeholders(str))
+            end
           end
 
           if named_placeholders.size != smartling_placeholders.size
@@ -138,6 +163,10 @@ module Rosette
           end
 
           Hash[smartling_placeholders.zip(named_placeholders)]
+        end
+
+        def find_inline_placeholders(text)
+          text.scan(/\{ph:\\?\{\d+\\?\}\}/)
         end
 
         def all_translations_for(locale)
