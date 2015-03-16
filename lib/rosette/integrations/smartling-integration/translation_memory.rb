@@ -3,8 +3,6 @@
 require 'digest/sha1'
 require 'thread'
 
-require 'pry-nav'
-
 module Rosette
   module Integrations
     class SmartlingIntegration < Integration
