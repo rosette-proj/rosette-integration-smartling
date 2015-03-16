@@ -4,7 +4,6 @@ require 'thread'
 require 'concurrent'
 require 'smartling/uri'
 require 'restclient'
-require 'tmx-parser'
 
 module Rosette
   module Integrations
@@ -89,25 +88,7 @@ module Rosette
         end
 
         def download_and_process(locale)
-          hash_from_tmx(download(locale))
-        end
-
-        def hash_from_tmx(tmx_contents)
-          result = Hash.new { |h, k| h[k] = [] }  # buckets in case of collisions
-          TmxParser.load(tmx_contents).each_with_object(result) do |unit, ret|
-            variant_prop = unit.properties['x-smartling-string-variant']
-            meta_key = convert_meta_key(variant_prop.value) if variant_prop
-            ret[meta_key] << unit if meta_key
-          end
-        end
-
-        def convert_meta_key(meta_key)
-          meta_key
-            .gsub(/:#::?/, '.')          # remove smartling separators
-            .gsub(/\A:?[\w\-_]+\./, '')  # remove locale at the front
-            .gsub(/\[([\d]+)\]/) do      # replace array elements
-              $1.to_i - 1                # subtract 1 because smartling
-            end                          # is dumb and starts counting at 1
+          SmartlingTmxParser.load(download(locale))
         end
 
         def download(locale)
@@ -116,6 +97,7 @@ module Rosette
           })
 
           RestClient.get(uri.to_s).body
+          # File.read("/Users/cameron/Downloads/memories/#{locale.code}-published.tmx")
         end
 
         def smartling_api
