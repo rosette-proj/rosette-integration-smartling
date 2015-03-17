@@ -125,10 +125,15 @@ module Rosette
                 placeholders[el.text]
               else
                 str = el.respond_to?(:text) ? el.text : el
-                str.dup.tap do |text|
-                  placeholders.each do |source, target|
-                    text.sub!(source, target) if source && target
+
+                if str
+                  str.dup.tap do |text|
+                    placeholders.each do |source, target|
+                      text.sub!(source, target) if source && target
+                    end
                   end
+                else
+                  ''
                 end
             end
           end
