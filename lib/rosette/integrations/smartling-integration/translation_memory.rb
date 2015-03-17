@@ -3,6 +3,8 @@
 require 'digest/sha1'
 require 'thread'
 
+require 'pry-nav'
+
 module Rosette
   module Integrations
     class SmartlingIntegration < Integration
@@ -49,21 +51,23 @@ module Rosette
             named_placeholders = named_placeholders_for(phrase)
             smartling_placeholders = smartling_placeholders_for(variant, phrase)
 
-            if (named_placeholders.size + smartling_placeholders.size) > 0
-              placeholders = associate_placeholders(
-                smartling_placeholders, named_placeholders
-              )
-
-              resolve_with_placeholders(variant, placeholders)
-            else
-              if named_placeholders.size != smartling_placeholders.size
-                rosette_config.error_reporter.report_warning(
-                  "Found #{named_placeholders.size} placeholder(s) in original key but " +
-                    "the same string in the translation memory has " +
-                    "#{smartling_placeholders.size} placeholder(s). Variant is " +
-                    "#{phrase.meta_key}, locale is #{locale.code}"
+            if named_placeholders.size == smartling_placeholders.size
+              if named_placeholders.size > 0
+                placeholders = associate_placeholders(
+                  smartling_placeholders, named_placeholders
                 )
+
+                resolve_with_placeholders(variant, placeholders)
+              else
+                resolve_without_placeholders(variant)
               end
+            else
+              rosette_config.error_reporter.report_warning(
+                "Found #{named_placeholders.size} placeholder(s) in original key but " +
+                  "the same string in the translation memory has " +
+                  "#{smartling_placeholders.size} placeholder(s). Variant is " +
+                  "#{phrase.meta_key}, locale is #{locale.code}"
+              )
 
               resolve_without_placeholders(variant)
             end
@@ -99,7 +103,7 @@ module Rosette
                 str = el.respond_to?(:text) ? el.text : el
                 str.dup.tap do |text|
                   placeholders.each do |source, target|
-                    text.sub!(source, target)
+                    text.sub!(source, target) if source && target
                   end
                 end
             end
