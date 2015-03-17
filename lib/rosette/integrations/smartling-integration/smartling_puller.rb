@@ -176,7 +176,10 @@ module Rosette
               phrase.meta_key, translation, locale, commit_ids
             )
           else
-            rosette_config.error_reporter.report_warning(
+            # these errors could be logged via rosette_config.error_reporter,
+            # but there can be quite a lot of them, which can inundate the
+            # error reporter with lots of false positives
+            logger.info(
               "No translation found for #{locale.code}, #{phrase.meta_key} " +
                 "('#{phrase.key}'), #{commit_log.commit_id}"
             )
