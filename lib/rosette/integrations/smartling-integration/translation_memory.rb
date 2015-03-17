@@ -11,6 +11,7 @@ module Rosette
       class TranslationMemory
         DEFAULT_HASH = {}.freeze
         PLURAL_REGEX = /\.?(zero|one|two|few|many|other)\z/
+        ALLOW_FUZZY = true
 
         attr_reader :translation_hash, :rosette_config, :repo_config
 
@@ -52,6 +53,11 @@ module Rosette
           unit = units.find do |unit|
             can_resolve?(unit, locale, phrase, source_placeholders)
           end
+
+          # If no unit can be found via an exact match, return the first one
+          # in the list. We know the meta key matches, but it's possible the
+          # key has changed.
+          unit ||= units.first if ALLOW_FUZZY
 
           if unit && variant = find_variant(unit, locale)
             resolve_variant(variant, source_placeholders)
