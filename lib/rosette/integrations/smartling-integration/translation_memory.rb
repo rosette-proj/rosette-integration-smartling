@@ -11,10 +11,11 @@ module Rosette
         DEFAULT_HASH = {}.freeze
         PLURAL_REGEX = /\.?(zero|one|two|few|many|other)\z/
 
-        attr_reader :translation_hash, :repo_config
+        attr_reader :translation_hash, :rosette_config, :repo_config
 
         def initialize(translation_hash, rosette_config, repo_config)
           @translation_hash = translation_hash
+          @rosette_config = rosette_config
           @repo_config = repo_config
           @checksum_mutex = Mutex.new
         end
