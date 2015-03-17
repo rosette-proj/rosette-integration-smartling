@@ -23,7 +23,7 @@ module Rosette
         end
 
         def translation_for(locale, phrase)
-          translation_cache[phrase.meta_key + phrase.key] ||= begin
+          fetch(phrase) do
             if is_potential_plural?(phrase.meta_key)
               units = find_plural_translation_for(locale, phrase.meta_key)
             end
@@ -47,6 +47,11 @@ module Rosette
         end
 
         private
+
+        def fetch(phrase)
+          key = (phrase.meta_key || '') + (phrase.key || '')
+          translation_cache[key] ||= yield
+        end
 
         def translation_cache
           @translation_cache ||= {}
