@@ -176,10 +176,6 @@ module Rosette
               phrase.meta_key, translation, locale, commit_ids
             )
           end
-        rescue PlaceholderMismatchError => e
-          rosette_config.error_reporter.report_error(e, {
-            commit_id: commit_log.commit_id
-          })
         end
 
         def should_import_translations?(tm, locale, commit_log)
