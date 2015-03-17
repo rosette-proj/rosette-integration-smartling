@@ -122,7 +122,7 @@ module Rosette
           variant.elements.each_with_object('') do |el, ret|
             ret << case el
               when TmxParser::Placeholder
-                placeholders[el.text]
+                placeholders[el.text] || ''
               else
                 str = el.respond_to?(:text) ? el.text : el
 
