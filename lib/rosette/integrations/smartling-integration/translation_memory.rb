@@ -23,15 +23,17 @@ module Rosette
         end
 
         def translation_for(locale, phrase)
-          if is_potential_plural?(phrase.meta_key)
-            units = find_plural_translation_for(locale, phrase.meta_key)
-          end
+          translation_cache[phrase.meta_key + phrase.key] ||= begin
+            if is_potential_plural?(phrase.meta_key)
+              units = find_plural_translation_for(locale, phrase.meta_key)
+            end
 
-          if !units || units.empty?
-            units = all_translations_for(locale).fetch(phrase.meta_key, [])
-          end
+            if !units || units.empty?
+              units = all_translations_for(locale).fetch(phrase.meta_key, [])
+            end
 
-          resolve(units, locale, phrase)
+            resolve(units, locale, phrase)
+          end
         end
 
         def checksum_for(locale)
@@ -45,6 +47,10 @@ module Rosette
         end
 
         private
+
+        def translation_cache
+          @translation_cache ||= {}
+        end
 
         # resolves placeholders and paired tags, returns a string
         def resolve(units, locale, phrase)
