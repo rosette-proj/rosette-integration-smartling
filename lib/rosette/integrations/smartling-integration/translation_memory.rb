@@ -1,5 +1,6 @@
 # encoding: UTF-8
 
+require 'twitter_cldr'
 require 'digest/sha1'
 require 'thread'
 
@@ -22,14 +23,14 @@ module Rosette
 
         def translation_for(locale, phrase)
           if is_potential_plural?(phrase.meta_key)
-            unit = find_plural_translation_for(locale, phrase.meta_key)
+            units = find_plural_translation_for(locale, phrase.meta_key)
           end
 
-          unit ||= all_translations_for(locale)
-            .fetch(phrase.meta_key, {})
-            .first
+          if !units || units.empty?
+            units = all_translations_for(locale).fetch(phrase.meta_key, [])
+          end
 
-          resolve(unit, locale, phrase) if unit
+          resolve(units, locale, phrase)
         end
 
         def checksum_for(locale)
@@ -45,39 +46,57 @@ module Rosette
         private
 
         # resolves placeholders and paired tags, returns a string
-        def resolve(unit, locale, phrase)
-          if variant = find_variant(unit, locale)
-            named_placeholders = named_placeholders_for(phrase)
-            smartling_placeholders = smartling_placeholders_for(variant, phrase)
+        def resolve(units, locale, phrase)
+          source_placeholders = source_placeholders_for(phrase)
 
-            if named_placeholders.size == smartling_placeholders.size
-              if named_placeholders.size > 0
-                placeholders = associate_placeholders(
-                  smartling_placeholders, named_placeholders
-                )
+          unit = units.find do |unit|
+            can_resolve?(unit, locale, phrase, source_placeholders)
+          end
 
-                resolve_with_placeholders(variant, placeholders)
-              else
-                resolve_without_placeholders(variant)
-              end
-            else
-              rosette_config.error_reporter.report_warning(
-                "Found #{named_placeholders.size} placeholder(s) in original key but " +
-                  "the same string in the translation memory has " +
-                  "#{smartling_placeholders.size} placeholder(s). Variant is " +
-                  "#{phrase.meta_key}, locale is #{locale.code}"
-              )
-
-              resolve_without_placeholders(variant)
-            end
+          if unit && variant = find_variant(unit, locale)
+            resolve_variant(variant, source_placeholders)
           end
         end
 
-        def named_placeholders_for(phrase)
+        def can_resolve?(unit, locale, phrase, source_placeholders)
+          if variant = find_variant(unit, repo_config.source_locale)
+            normalized_eql?(
+              phrase.key,
+              resolve_variant(variant, source_placeholders)
+            )
+          else
+            false
+          end
+        end
+
+        def normalized_eql?(str1, str2)
+          smartling_normalize(TwitterCldr::Normalization.normalize(str1)).eql?(
+            smartling_normalize(TwitterCldr::Normalization.normalize(str2))
+          )
+        end
+
+        def smartling_normalize(str)
+          str.gsub("\r", "\n").strip
+        end
+
+        def resolve_variant(variant, source_placeholders)
+          target_placeholders = target_placeholders_for(variant)
+          placeholders = associate_placeholders(
+            target_placeholders, source_placeholders
+          )
+
+          if placeholders.size > 0
+            resolve_with_placeholders(variant, placeholders)
+          else
+            resolve_without_placeholders(variant)
+          end
+        end
+
+        def source_placeholders_for(phrase)
           phrase.key.scan(placeholder_regex)
         end
 
-        def smartling_placeholders_for(variant, phrase)
+        def target_placeholders_for(variant)
           variant.elements.each_with_object([]) do |el, ret|
             case el
               when TmxParser::Placeholder
@@ -89,8 +108,8 @@ module Rosette
           end
         end
 
-        def associate_placeholders(smartling_placeholders, named_placeholders)
-          Hash[smartling_placeholders.zip(named_placeholders)]
+        def associate_placeholders(target_placeholders, source_placeholders)
+          Hash[target_placeholders.zip(source_placeholders)]
         end
 
         def resolve_with_placeholders(variant, placeholders)
@@ -132,7 +151,8 @@ module Rosette
         end
 
         def digest_unit(unit, locale, digest)
-          if variant = find_variant(unit, locale)
+          variants = unit.variants.sort { |v1, v2| v1.locale <=> v2.locale }
+          variants.each do |variant|
             variant.elements.each do |element|
               digest << case element
                 when String
@@ -146,7 +166,7 @@ module Rosette
 
         def find_variant(unit, locale)
           unit.variants.find do |variant|
-            variant.locale == locale.code
+            variant.locale == locale.code || variant.locale == locale.language
           end
         end
 
@@ -162,7 +182,7 @@ module Rosette
           if units = all_translations[meta_key_base]
             plural_form_suffix = "[#{plural_form}]"
 
-            units.find do |unit|
+            units.select do |unit|
               unit.tuid.end_with?(plural_form_suffix)
             end
           end

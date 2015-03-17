@@ -62,6 +62,43 @@ describe SmartlingIntegration::TranslationMemory do
     )
   end
 
+  describe '#checksum_for' do
+    let(:tmx_contents) do
+      %Q{
+        <tmx version="1.4">
+          <body>
+            <tu tuid="abc123" segtype="block">
+              <prop type="x-smartling-string-variant">foo.bar</prop>
+              <tuv xml:lang="en-US"><seg>foobar</seg></tuv>
+              <tuv xml:lang="de-DE"><seg>foosbar</seg></tuv>
+            </tu>
+            <tu tuid="def456" segtype="block">
+              <prop type="x-smartling-string-variant">foo.bar.baz</prop>
+              <tuv xml:lang="de-DE"><seg>foosbarbeitsch</seg></tuv>
+              <tuv xml:lang="en-US"><seg>foobarbaz</seg></tuv>
+            </tu>
+          </body>
+        </tmx>
+      }
+    end
+
+    it 'returns the same checksum' do
+      expect(memory.checksum_for(locale)).to eq(memory.checksum_for(locale))
+
+      second_memory = SmartlingIntegration::TranslationMemory.new(
+        { locale_code => memory_hash }, rosette_config, repo_config
+      )
+
+      expect(second_memory.checksum_for(locale)).to(
+        eq(second_memory.checksum_for(locale))
+      )
+
+      expect(memory.checksum_for(locale)).to(
+        eq(second_memory.checksum_for(locale))
+      )
+    end
+  end
+
   describe '#translation_for' do
     it 'returns the translation for the given locale and meta key' do
       trans = memory.translation_for(locale, phrase)
@@ -110,13 +147,14 @@ describe SmartlingIntegration::TranslationMemory do
 
       it 'defaults to smartling-style plurals' do
         phrase = InMemoryDataStore::Phrase.create(
-          key: 'fakefake', meta_key: "#{meta_key_base}.one"
+          key: 'Smartling singular', meta_key: "#{meta_key_base}.one"
         )
 
         trans = memory.translation_for(locale, phrase)
         expect(trans).to eq('Smartling german singular')
 
         phrase.meta_key = "#{meta_key_base}.other"
+        phrase.key = 'Smartling plural'
         trans = memory.translation_for(locale, phrase)
         expect(trans).to eq('Smartling german plural')
       end
@@ -126,15 +164,85 @@ describe SmartlingIntegration::TranslationMemory do
         memory_hash.delete(meta_key_base)
 
         phrase = InMemoryDataStore::Phrase.create(
-          key: 'fakefake', meta_key: "#{meta_key_base}.one"
+          key: 'DIY singular', meta_key: "#{meta_key_base}.one"
         )
 
         trans = memory.translation_for(locale, phrase)
         expect(trans).to eq('DIY german singular')
 
         phrase.meta_key = "#{meta_key_base}.other"
+        phrase.key = 'DIY plural'
         trans = memory.translation_for(locale, phrase)
         expect(trans).to eq('DIY german plural')
+      end
+    end
+
+    context 'with a translation memory containing duplicate meta keys' do
+      let(:tmx_contents) do
+        %Q{
+          <tmx version="1.4">
+            <body>
+              <tu tuid="abc123" segtype="block">
+                <prop type="x-smartling-string-variant">#{meta_key}</prop>
+                <tuv xml:lang="en-US"><seg>first value</seg></tuv>
+                <tuv xml:lang="de-DE"><seg>first value german</seg></tuv>
+              </tu>
+              <tu tuid="def456" segtype="block">
+                <prop type="x-smartling-string-variant">#{meta_key}</prop>
+                <tuv xml:lang="en-US"><seg>second value</seg></tuv>
+                <tuv xml:lang="de-DE"><seg>second value german</seg></tuv>
+              </tu>
+            </body>
+          </tmx>
+        }
+      end
+
+      it 'returns the correct translation using the phrase key to disambiguate' do
+        phrase = InMemoryDataStore::Phrase.create(
+          key: 'first value', meta_key: "#{meta_key_base}"
+        )
+
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to eq('first value german')
+
+        phrase.key = 'second value'
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to eq('second value german')
+      end
+
+      it 'returns nil if no translation can be found' do
+        phrase = InMemoryDataStore::Phrase.create(
+          key: 'foofoofoo', meta_key: "#{meta_key_base}"
+        )
+
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to be_nil
+      end
+    end
+
+    context 'with a translation memory containing non-normalized text' do
+      let(:tmx_contents) do
+        %Q{
+          <tmx version="1.4">
+            <body>
+              <tu tuid="abc123" segtype="block">
+                <prop type="x-smartling-string-variant">#{meta_key}</prop>
+                <tuv xml:lang="en-US"><seg>#{[101, 115, 112, 97, 110, 771, 111, 108].pack("U*")}</seg></tuv>
+                <tuv xml:lang="de-DE"><seg>spanish</seg></tuv>
+              </tu>
+            </body>
+          </tmx>
+        }
+      end
+
+      it 'normalizes the string when comparing' do
+        phrase = InMemoryDataStore::Phrase.create(
+          key: [101, 115, 112, 97, 241, 111, 108].pack("U*"),
+          meta_key: "#{meta_key_base}"
+        )
+
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to eq('spanish')
       end
     end
   end
