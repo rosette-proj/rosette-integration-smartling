@@ -175,6 +175,11 @@ module Rosette
             import_translation(
               phrase.meta_key, translation, locale, commit_ids
             )
+          else
+            rosette_config.error_reporter.report_warning(
+              "No translation found for #{locale.code}, #{phrase.meta_key} " +
+                "('#{phrase.key}'), #{commit_log.commit_id}"
+            )
           end
         end
 
