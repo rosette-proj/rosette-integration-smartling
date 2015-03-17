@@ -77,7 +77,7 @@ module Rosette
 
         def resolve_without_placeholders(variant)
           variant.elements.each_with_object('') do |el, ret|
-            ret << el.respond_to?(:text) ? el.text : el
+            ret << (el.respond_to?(:text) ? el.text : el)
           end
         end
 
