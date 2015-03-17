@@ -43,7 +43,9 @@ module Rosette
             build_synchronously
           end
 
-          TranslationMemory.new(memory, repo_config)
+          TranslationMemory.new(
+            memory, rosette_config, repo_config
+          )
         end
 
         private

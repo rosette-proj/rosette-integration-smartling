@@ -58,7 +58,7 @@ describe SmartlingIntegration::TranslationMemory do
 
   let(:memory) do
     SmartlingIntegration::TranslationMemory.new(
-      { locale_code => memory_hash }, repo_config
+      { locale_code => memory_hash }, rosette_config, repo_config
     )
   end
 

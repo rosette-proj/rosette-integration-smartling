@@ -67,7 +67,7 @@ describe SmartlingIntegration::SmartlingPuller do
 
   let(:translation_memory) do
     SmartlingIntegration::TranslationMemory.new(
-      translation_memory_hash, repo_config
+      translation_memory_hash, rosette_config, repo_config
     )
   end
 

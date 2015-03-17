@@ -7,16 +7,13 @@ module Rosette
   module Integrations
     class SmartlingIntegration < Integration
 
-      class PlaceholderMismatchError < StandardError; end
-
       class TranslationMemory
-
         DEFAULT_HASH = {}.freeze
         PLURAL_REGEX = /\.?(zero|one|two|few|many|other)\z/
 
         attr_reader :translation_hash, :repo_config
 
-        def initialize(translation_hash, repo_config)
+        def initialize(translation_hash, rosette_config, repo_config)
           @translation_hash = translation_hash
           @repo_config = repo_config
           @checksum_mutex = Mutex.new
@@ -49,14 +46,48 @@ module Rosette
         # resolves placeholders and paired tags, returns a string
         def resolve(unit, locale, phrase)
           if variant = find_variant(unit, locale)
-            placeholders = associate_placeholders(variant, phrase)
+            named_placeholders = named_placeholders_for(phrase)
+            smartling_placeholders = smartling_placeholders_for(variant, phrase)
 
-            if placeholders.size > 0
+            if (named_placeholders.size + smartling_placeholders.size) > 0
+              placeholders = associate_placeholders(
+                smartling_placeholders, named_placeholders
+              )
+
               resolve_with_placeholders(variant, placeholders)
             else
+              if named_placeholders.size != smartling_placeholders.size
+                rosette_config.error_reporter.report_warning(
+                  "Found #{named_placeholders.size} placeholder(s) in original key but " +
+                    "the same string in the translation memory has " +
+                    "#{smartling_placeholders.size} placeholder(s). Variant is " +
+                    "#{phrase.meta_key}, locale is #{locale.code}"
+                )
+              end
+
               resolve_without_placeholders(variant)
             end
           end
+        end
+
+        def named_placeholders_for(phrase)
+          phrase.key.scan(placeholder_regex)
+        end
+
+        def smartling_placeholders_for(variant, phrase)
+          variant.elements.each_with_object([]) do |el, ret|
+            case el
+              when TmxParser::Placeholder
+                ret << el.text
+              else
+                str = el.respond_to?(:text) ? el.text : el
+                ret.concat(find_inline_placeholders(str))
+            end
+          end
+        end
+
+        def associate_placeholders(smartling_placeholders, named_placeholders)
+          Hash[smartling_placeholders.zip(named_placeholders)]
         end
 
         def resolve_with_placeholders(variant, placeholders)
@@ -140,31 +171,14 @@ module Rosette
           )
         end
 
-        def associate_placeholders(variant, phrase)
-          named_placeholders = phrase.key.scan(placeholder_regex)
-          smartling_placeholders = variant.elements.each_with_object([]) do |el, ret|
-            case el
-              when TmxParser::Placeholder
-                ret << el.text
-              else
-                str = el.respond_to?(:text) ? el.text : el
-                ret.concat(find_inline_placeholders(str))
-            end
-          end
-
-          if named_placeholders.size != smartling_placeholders.size
-            raise PlaceholderMismatchError,
-              "Found #{named_placeholders.size} placeholder(s) in original key but " +
-                "the same string in the translation memory has " +
-                "#{smartling_placeholders.size} placeholder(s). Variant is " +
-                "#{phrase.meta_key}."
-          end
-
-          Hash[smartling_placeholders.zip(named_placeholders)]
+        def find_inline_placeholders(text)
+          text.scan(inline_placeholder_regex)
         end
 
-        def find_inline_placeholders(text)
-          text.scan(/\{ph:\\?\{\d+\\?\}\}/)
+        def inline_placeholder_regex
+          @inline_placeholder_regex ||= Regexp.union(
+            /\{ph:\\?\{\d+\\?\}\}/, placeholder_regex
+          )
         end
 
         def all_translations_for(locale)
