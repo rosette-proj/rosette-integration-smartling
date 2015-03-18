@@ -25,7 +25,6 @@ module Rosette
 
         def translation_for(locale, phrase)
           fetch(phrase) do
-            Rosette.logger.info("CACHE MISS #{translation_cache.size}")
             if is_potential_plural?(phrase.meta_key)
               units = find_plural_translation_for(locale, phrase.meta_key)
             end
