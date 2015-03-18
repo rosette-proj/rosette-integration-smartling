@@ -20,10 +20,12 @@ module Rosette
           @rosette_config = rosette_config
           @repo_config = repo_config
           @checksum_mutex = Mutex.new
+          @cache_mutex = Mutex.new
         end
 
         def translation_for(locale, phrase)
           fetch(phrase) do
+            Rosette.logger.info("CACHE MISS #{translation_cache.size}")
             if is_potential_plural?(phrase.meta_key)
               units = find_plural_translation_for(locale, phrase.meta_key)
             end
@@ -50,7 +52,11 @@ module Rosette
 
         def fetch(phrase)
           key = (phrase.meta_key || '') + (phrase.key || '')
-          translation_cache[key] ||= yield
+          translation_cache.fetch(key) do
+            @cache_mutex.synchronize do
+              translation_cache[key] = yield
+            end
+          end
         end
 
         def translation_cache
