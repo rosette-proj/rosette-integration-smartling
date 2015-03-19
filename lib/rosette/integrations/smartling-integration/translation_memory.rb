@@ -50,7 +50,7 @@ module Rosette
         private
 
         def fetch(phrase)
-          key = (phrase.meta_key || '') + (phrase.key || '')
+          key = "#{phrase.meta_key}#{phrase.key}"
           translation_cache.fetch(key) do
             @cache_mutex.synchronize do
               translation_cache[key] = yield
@@ -204,6 +204,8 @@ module Rosette
         def find_plural_translation_for(locale, meta_key)
           all_translations = all_translations_for(locale)
           meta_key_base = meta_key.sub(PLURAL_REGEX, '')
+
+          # $1 holds the plural form (eg. 'one', 'many', 'other', etc)
           plural_form = $1
 
           if units = all_translations[meta_key_base]

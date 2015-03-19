@@ -5,7 +5,6 @@ ruby '2.0.0', engine: 'jruby', engine_version: '1.7.15'
 gemspec
 
 group :development, :test do
-  gem 'tmx-parser', path: '~/workspace/tmx-parser'
   gem 'rosette-datastore-memory', path: '~/workspace/rosette-datastore-memory'
   gem 'activemodel'
   gem 'rosette-serializer-yaml', path: '~/workspace/rosette-serializer-yaml'

@@ -99,7 +99,6 @@ module Rosette
           })
 
           RestClient.get(uri.to_s).body
-          # File.read("/Users/cameron/Downloads/memories/#{locale.code}-published.tmx")
         end
 
         def smartling_api
