@@ -99,7 +99,7 @@ module Rosette
             )
 
             response = uploader.upload
-            phrase_count = response['stringCount']
+            commit_log.phrase_count = response['stringCount']
           end
 
           commit_log.push
@@ -119,7 +119,8 @@ module Rosette
 
         def save_log(commit_log)
           rosette_config.datastore.add_or_update_commit_log(
-            repo_config.name, commit_log.commit_id, nil, commit_log.status
+            repo_config.name, commit_log.commit_id, nil,
+            commit_log.status, commit_log.phrase_count
           )
         end
 

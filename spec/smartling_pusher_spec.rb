@@ -14,6 +14,12 @@ describe SmartlingIntegration::SmartlingPusher do
       config.use_datastore('in-memory')
       config.use_error_reporter(Rosette::Core::RaisingErrorReporter.new)
       config.add_repo(repo_name) do |repo_config|
+        repo_config.add_extractor('yaml/rails') do |extractor_config|
+          extractor_config.set_conditions do |conditions|
+            conditions.match_regex(//)
+          end
+        end
+
         repo_config.set_path(File.join(repo.working_dir, '/.git'))
         repo_config.add_integration('smartling') do |integration_config|
           integration_config.set_directives(directives)
@@ -66,7 +72,7 @@ describe SmartlingIntegration::SmartlingPusher do
     InMemoryDataStore::CommitLog.create(
       repo_name: repo_name,
       commit_id: commit_id,
-      phrase_count: 1,
+      phrase_count: nil,
       status: Rosette::DataStores::PhraseStatus::UNTRANSLATED,
       commit_datetime: DateTime.now
     )

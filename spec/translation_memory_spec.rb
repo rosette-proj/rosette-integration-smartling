@@ -210,9 +210,18 @@ describe SmartlingIntegration::TranslationMemory do
         expect(trans).to eq('second value german')
       end
 
-      it 'returns nil if no translation can be found' do
+      it 'returns the first exact meta key match if no key matches' do
         phrase = InMemoryDataStore::Phrase.create(
           key: 'foofoofoo', meta_key: "#{meta_key_base}"
+        )
+
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to eq('first value german')
+      end
+
+      it 'returns nil if no match' do
+        phrase = InMemoryDataStore::Phrase.create(
+          key: 'foofoofoo', meta_key: "i.dont.exist"
         )
 
         trans = memory.translation_for(locale, phrase)
