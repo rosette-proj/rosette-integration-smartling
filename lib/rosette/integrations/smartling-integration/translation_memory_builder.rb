@@ -1,19 +1,19 @@
 # encoding: UTF-8
 
-require 'concurrent'
 require 'thread'
+require 'concurrent'
+require 'smartling/uri'
+require 'restclient'
 
 module Rosette
   module Integrations
     class SmartlingIntegration < Integration
       class TranslationMemoryBuilder
 
+        TMX_API_PATH = 'translations/download'
         DEFAULT_THREAD_POOL_SIZE = 10
 
-        attr_reader :rosette_config, :repo_config
-        attr_reader :serializer_id, :extractor_id
-        attr_reader :uploader, :thread_pool_size
-        attr_reader :logger
+        attr_reader :rosette_config, :repo_config, :thread_pool_size, :logger
 
         def initialize(rosette_config)
           @rosette_config = rosette_config
@@ -26,18 +26,8 @@ module Rosette
           self
         end
 
-        def set_serializer_id(serializer_id)
-          @serializer_id = serializer_id
-          self
-        end
-
-        def set_extractor_id(extractor_id)
-          @extractor_id = extractor_id
-          self
-        end
-
-        def set_thread_pool_size(size)
-          @thread_pool_size = size
+        def set_thread_pool_size(thread_pool_size)
+          @thread_pool_size = thread_pool_size
           self
         end
 
@@ -47,76 +37,44 @@ module Rosette
         end
 
         def build
-          phrases = get_phrases
-          @uploader = build_uploader_for(phrases)
-
-          logger.info('Uploading translation memory seed to Smartling')
-          uploader.upload
+          memory = if thread_pool_size > 0
+            build_asynchronously
+          else
+            build_synchronously
+          end
 
           TranslationMemory.new(
-            download(repo_config.locales, uploader)
+            memory, rosette_config, repo_config
           )
-        end
-
-        # used?
-        def cleanup
-          if uploader
-            delete_file(uploader.destination_file_uri)
-          end
         end
 
         private
 
-        def hash_mutex
-          @hash_mutex ||= Mutex.new
-        end
-
-        def get_phrases
-          if thread_pool_size > 0
-            get_phrases_asynchronously
-          else
-            get_phrases_synchronously
+        def build_synchronously
+          repo_config.locales.each_with_object({}) do |locale, ret|
+            ret[locale.code] = download_and_process(locale)
           end
         end
 
-        def get_phrases_synchronously
-          datastore.each_unique_meta_key(repo_config.name).each_with_object({}) do |meta_key, ret|
-            recent_key = datastore.most_recent_key_for_meta_key(
-              repo_config.name, meta_key
-            )
-
-            ret[meta_key] = recent_key
-          end
-        end
-
-        def get_phrases_asynchronously
+        def build_asynchronously
           pool = Concurrent::FixedThreadPool.new(thread_pool_size)
-          counter = 0
+          hash_mutex ||= Mutex.new
+          total = 0
 
-          phrases = datastore.each_unique_meta_key(repo_config.name).each_with_object({}) do |meta_key, ret|
+          result = repo_config.locales.each_with_object({}) do |locale, ret|
             pool << Proc.new do
-              recent_key = datastore.most_recent_key_for_meta_key(
-                repo_config.name, meta_key
-              )
-
-              hash_mutex.synchronize do
-                ret[meta_key] = recent_key
-              end
+              memory_hash = download_and_process(locale)
+              hash_mutex.synchronize { ret[locale.code] = memory_hash }
             end
 
-            counter += 1
+            total += 1
           end
 
-          drain_pool(pool) do |completed_count|
-            logger.info(
-              "#{repo_config.name}: #{completed_count} of #{counter} meta keys identified"
-            )
-          end
-
-          phrases
+          drain_pool(pool, total)
+          result
         end
 
-        def drain_pool(pool)
+        def drain_pool(pool, total)
           pool.shutdown
           last_completed_count = 0
 
@@ -124,91 +82,28 @@ module Rosette
             current_completed_count = pool.completed_task_count
 
             if current_completed_count > last_completed_count
-              yield current_completed_count
+              logger.info("Downloading locale #{current_completed_count} of #{total}")
             end
 
             last_completed_count = current_completed_count
           end
         end
 
-        def delete_file(file_uri)
-          Retrier.retry(times: 3) do
-            smartling_api.delete(file_uri)
-          end.on_error(Exception).execute
+        def download_and_process(locale)
+          SmartlingTmxParser.load(download(locale))
         end
 
-        def download(locales, uploader)
-          if thread_pool_size > 0
-            download_asynchronously(locales, uploader)
-          else
-            download_synchronously(locales, uploader)
-          end
-        end
+        def download(locale)
+          uri = smartling_api.api.uri(TMX_API_PATH, {
+            locale: locale.code, format: 'TMX', dataSet: 'published'
+          })
 
-        def download_synchronously(locales, uploader)
-          locales.each_with_object({}) do |locale, ret|
-            contents = download_locale(locale, uploader)
-            ret[locale.code] = extractor.extract_each_from(contents).each_with_object({}) do |(trans, _), ret|
-              ret[trans.meta_key] = trans
-            end
-          end
-        end
-
-        def download_asynchronously(locales, uploader)
-          pool = Concurrent::FixedThreadPool.new(thread_pool_size)
-
-          result = locales.each_with_object({}) do |locale, ret|
-            pool << Proc.new do
-              contents = download_locale(locale, uploader)
-              extracted = extractor.extract_each_from(contents).each_with_object({}) do |(trans, _), ret|
-                ret[trans.meta_key] = trans
-              end
-
-              hash_mutex.synchronize do
-                ret[locale.code] = extracted
-              end
-            end
-          end
-
-          drain_pool(pool) do |completed_count|
-            logger.info(
-              "#{repo_config.name}: #{completed_count} of #{locales.size} locales downloaded"
-            )
-          end
-
-          result
-        end
-
-        def download_locale(locale, uploader)
-          SmartlingDownloader.download_file(
-            smartling_api, uploader.destination_file_uri, locale
-          )
-        end
-
-        def build_uploader_for(phrases)
-          SmartlingUploader.new(rosette_config)
-            .set_repo_config(repo_config)
-            .set_phrases(phrases)
-            .set_file_name('memory')
-            .set_serializer_id(serializer_id)
-            .set_smartling_api(smartling_api)
+          RestClient.get(uri.to_s).body
         end
 
         def smartling_api
-          repo_config.get_integration('smartling').smartling_memory_api
-        end
-
-        def datastore
-          rosette_config.datastore
-        end
-
-        def extractor_config
-          @extractor_config ||=
-            repo_config.get_extractor_config(extractor_id)
-        end
-
-        def extractor
-          @extractor ||= extractor_config.extractor
+          @smartling_api ||=
+            repo_config.get_integration('smartling').smartling_api
         end
 
       end

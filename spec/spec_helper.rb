@@ -10,6 +10,7 @@ require 'rosette/integrations/smartling-integration'
 require 'rosette/serializers/yaml-serializer'
 require 'rosette/extractors/yaml-extractor'
 require 'rosette/data_stores/in_memory_data_store'
+require 'tmx-parser'
 
 RSpec.configure do |config|
   config.after(:each) do

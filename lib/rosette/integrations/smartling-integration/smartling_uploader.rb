@@ -96,7 +96,7 @@ module Rosette
         def file_for_upload
           Tempfile.open(['rosette', serializer_const.default_extension]) do |file|
             serializer = serializer_const.new(file, repo_config.source_locale)
-            serializer.write_raw(integration_config.configuration.directives + "\n")
+            serializer.write_raw((directives || '') + "\n")
 
             write_phrases(serializer)
             serializer.flush
@@ -127,6 +127,10 @@ module Rosette
 
         def serializer_const
           @serializer_const ||= Rosette::Core::SerializerId.resolve(serializer_id)
+        end
+
+        def directives
+          integration_config.configuration.directives
         end
 
         def integration_config

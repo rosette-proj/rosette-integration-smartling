@@ -40,26 +40,34 @@ describe SmartlingIntegration::SmartlingPuller do
       .set_thread_pool_size(0)
   end
 
-  let(:phrase) do
-    InMemoryDataStore::Phrase.create(
-      repo_name: repo_name,
-      commit_id: commit_id,
-      meta_key: 'phrase',
-      key: "I'm a little teapot",
-      file: 'foo.txt'
-    )
+  let(:key) { "I'm a little teapot" }
+  let(:meta_key) { 'phrase' }
+
+  def tmx_contents_for(locale)
+    %Q{
+      <tmx version="1.4">
+        <body>
+          <tu tuid="abc123" segtype="block">
+            <prop type="x-smartling-string-variant">#{meta_key}</prop>
+            <tuv xml:lang="en-US"><seg>#{key}</seg></tuv>
+            <tuv xml:lang="#{locale}"><seg>#{key}</seg></tuv>
+          </tu>
+        </body>
+      </tmx>
+    }
   end
 
   let(:translation_memory_hash) do
     locales.each_with_object({}) do |locale, ret|
-      ret[locale] ||= {}
-      ret[locale][phrase.meta_key] = phrase
+      ret[locale] = SmartlingIntegration::SmartlingTmxParser.load(
+        tmx_contents_for(locale)
+      )
     end
   end
 
   let(:translation_memory) do
     SmartlingIntegration::TranslationMemory.new(
-      translation_memory_hash
+      translation_memory_hash, rosette_config, repo_config
     )
   end
 
@@ -70,6 +78,14 @@ describe SmartlingIntegration::SmartlingPuller do
 
     repo.add_all
     repo.commit('First commit')
+
+    InMemoryDataStore::Phrase.create(
+      repo_name: repo_name,
+      commit_id: commit_id,
+      meta_key: meta_key,
+      key: key,
+      file: 'foo.txt'
+    )
 
     locales.each do |locale|
       InMemoryDataStore::CommitLogLocale.create(
@@ -120,13 +136,11 @@ describe SmartlingIntegration::SmartlingPuller do
       entry.commit_id == commit_id && entry.repo_name == repo_name
     end
 
-    expect(commit_log_entry.status).to eq(
-      Rosette::DataStores::PhraseStatus::PULLING
-    )
+    expect(commit_log_entry.status).to eq(PhraseStatus::PULLING)
   end
 
   context 'with a PULLED commit' do
-    let(:status) { Rosette::DataStores::PhraseStatus::PULLED }
+    let(:status) { PhraseStatus::PULLED }
 
     it 'marks commit as TRANSLATED' do
       puller.pull
@@ -135,9 +149,7 @@ describe SmartlingIntegration::SmartlingPuller do
         entry.commit_id == commit_id && entry.repo_name == repo_name
       end
 
-      expect(commit_log_entry.status).to eq(
-        Rosette::DataStores::PhraseStatus::TRANSLATED
-      )
+      expect(commit_log_entry.status).to eq(PhraseStatus::TRANSLATED)
     end
   end
 
@@ -152,9 +164,7 @@ describe SmartlingIntegration::SmartlingPuller do
       commit_log_entry.attributes[:phrase_count] = 0
       puller.pull
 
-      expect(commit_log_entry.status).to eq(
-        Rosette::DataStores::PhraseStatus::TRANSLATED
-      )
+      expect(commit_log_entry.status).to eq(PhraseStatus::TRANSLATED)
     end
   end
 end
