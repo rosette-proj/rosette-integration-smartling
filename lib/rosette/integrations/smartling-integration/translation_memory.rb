@@ -24,7 +24,7 @@ module Rosette
         end
 
         def translation_for(locale, phrase)
-          fetch(phrase) do
+          fetch(locale, phrase) do
             if is_potential_plural?(phrase.meta_key)
               units = find_plural_translation_for(locale, phrase.meta_key)
             end
@@ -49,8 +49,8 @@ module Rosette
 
         private
 
-        def fetch(phrase)
-          key = "#{phrase.meta_key}#{phrase.key}"
+        def fetch(locale, phrase)
+          key = "#{locale.code}#{phrase.meta_key}#{phrase.key}"
           translation_cache.fetch(key) do
             @cache_mutex.synchronize do
               translation_cache[key] = yield
