@@ -23,8 +23,6 @@ describe SmartlingIntegration::SmartlingPuller do
     end
   end
 
-  let(:serializer_id) { 'yaml/rails' }
-  let(:extractor_id) { 'yaml/rails' }
   let(:repo_config) { rosette_config.get_repo(repo_name) }
   let(:smartling_api_base) { double(:smartling_api) }
   let(:commit_id) { repo.git('rev-parse HEAD').strip }
@@ -35,8 +33,6 @@ describe SmartlingIntegration::SmartlingPuller do
   let(:puller) do
     SmartlingIntegration::SmartlingPuller.new(rosette_config)
       .set_repo_config(repo_config)
-      .set_serializer_id(serializer_id)
-      .set_extractor_id(extractor_id)
       .set_thread_pool_size(0)
   end
 

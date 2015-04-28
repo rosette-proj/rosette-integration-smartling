@@ -66,9 +66,12 @@ module Rosette
         def resolve(units, locale, phrase)
           source_placeholders = source_placeholders_for(phrase)
 
-          unit = units.find do |unit|
+          unit_candidates = units.select do |unit|
             can_resolve?(unit, locale, phrase, source_placeholders)
           end
+
+          # try to get the most recent one
+          unit = unit_candidates.last
 
           # If no unit can be found via an exact match, return the first one
           # in the list. We know the meta key matches, but it's possible the

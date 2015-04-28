@@ -16,8 +16,7 @@ module Rosette
           Rosette::DataStores::PhraseStatus::PULLED
         ]
 
-        attr_reader :rosette_config
-        attr_reader :repo_config, :serializer_id, :extractor_id
+        attr_reader :rosette_config, :repo_config
         attr_reader :thread_pool_size, :logger
 
         def initialize(rosette_config)
@@ -28,16 +27,6 @@ module Rosette
 
         def set_repo_config(repo_config)
           @repo_config = repo_config
-          self
-        end
-
-        def set_serializer_id(serializer_id)
-          @serializer_id = serializer_id
-          self
-        end
-
-        def set_extractor_id(extractor_id)
-          @extractor_id = extractor_id
           self
         end
 
