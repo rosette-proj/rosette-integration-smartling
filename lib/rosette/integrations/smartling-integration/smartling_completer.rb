@@ -48,7 +48,10 @@ module Rosette
               begin
                 file = locales_map[repo_config.locales.first.code]
                 logger.info("Deleting file #{file_uri} from Smartling")
-                delete_file(file)
+                # Don't delete the file - smartling will mark translations that
+                # have no current file as "inactive" and exclude them from the
+                # translation memory. Goddamn it.
+                # delete_file(file)
                 logger.info("Done deleting file #{file_uri} from Smartling")
               rescue => e
                 rosette_config.error_reporter.report_error(e, {
