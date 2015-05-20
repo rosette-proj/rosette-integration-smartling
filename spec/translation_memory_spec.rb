@@ -106,12 +106,24 @@ describe SmartlingIntegration::TranslationMemory do
     end
 
     context 'with a translation with a Smartling-style placeholder' do
-      let(:key) { "Hello there %{name}" }
-      let(:translation) { "Hola {0}" }
+      let(:key) { 'Hello there {0}' }
+      let(:translation) { 'Hola {0}' }
 
       it 'replaces the Smartling-style placeholder' do
+        phrase.key = 'Hello there %{name}'
         trans = memory.translation_for(locale, phrase)
         expect(trans).to eq('Hola %{name}')
+      end
+    end
+
+    context 'with a translation containing multiple Smartling-style placeholders' do
+      let(:key) { 'I like {0}, {1}, and {2}' }
+      let(:translation) { 'Me gustan los {2}, {0}, and {1}'}
+
+      it 'correctly associates Smartling-style placeholders with named ones' do
+        phrase.key = 'I like %{apples}, %{bananas}, and %{peaches}'
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to eq('Me gustan los %{peaches}, %{apples}, and %{bananas}')
       end
     end
 
