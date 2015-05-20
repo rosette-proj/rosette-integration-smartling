@@ -64,10 +64,8 @@ module Rosette
 
         # resolves placeholders and paired tags, returns a string
         def resolve(units, locale, phrase)
-          source_placeholders = source_placeholders_for(phrase)
-
           unit_candidates = units.select do |unit|
-            can_resolve?(unit, locale, phrase, source_placeholders)
+            can_resolve?(unit, locale, phrase)
           end
 
           # try to get the most recent one
@@ -79,15 +77,18 @@ module Rosette
           unit ||= units.first if ALLOW_FUZZY
 
           if unit && variant = find_variant(unit, locale)
-            resolve_variant(variant, source_placeholders)
+            placeholder_map = build_placeholder_map(phrase, unit)
+            resolve_variant(variant, placeholder_map)
           end
         end
 
-        def can_resolve?(unit, locale, phrase, source_placeholders)
+        def can_resolve?(unit, locale, phrase)
+          placeholder_map = build_placeholder_map(phrase, unit)
+
           if variant = find_variant(unit, repo_config.source_locale)
             normalized_eql?(
               phrase.key,
-              resolve_variant(variant, source_placeholders)
+              resolve_variant(variant, placeholder_map)
             )
           else
             false
@@ -104,24 +105,26 @@ module Rosette
           str.gsub("\r", "\n").strip
         end
 
-        def resolve_variant(variant, source_placeholders)
-          target_placeholders = target_placeholders_for(variant)
-          placeholders = associate_placeholders(
-            target_placeholders, source_placeholders
-          )
-
-          if placeholders.size > 0
-            resolve_with_placeholders(variant, placeholders)
+        def resolve_variant(variant, placeholder_map)
+          if placeholder_map.size > 0
+            resolve_with_placeholders(variant, placeholder_map)
           else
             resolve_without_placeholders(variant)
           end
         end
 
-        def source_placeholders_for(phrase)
+        def build_placeholder_map(phrase, unit)
+          target_variant = find_variant(unit, repo_config.source_locale)
+          target_placeholders = variant_placeholders_for(target_variant)
+          source_placeholders = phrase_placeholders_for(phrase)
+          associate_placeholders(target_placeholders, source_placeholders)
+        end
+
+        def phrase_placeholders_for(phrase)
           phrase.key.scan(placeholder_regex)
         end
 
-        def target_placeholders_for(variant)
+        def variant_placeholders_for(variant)
           variant.elements.each_with_object([]) do |el, ret|
             case el
               when TmxParser::Placeholder
@@ -137,17 +140,17 @@ module Rosette
           Hash[target_placeholders.zip(source_placeholders)]
         end
 
-        def resolve_with_placeholders(variant, placeholders)
+        def resolve_with_placeholders(variant, placeholder_map)
           variant.elements.each_with_object('') do |el, ret|
             ret << case el
               when TmxParser::Placeholder
-                placeholders[el.text] || ''
+                placeholder_map[el.text] || ''
               else
                 str = el.respond_to?(:text) ? el.text : el
 
                 if str
                   str.dup.tap do |text|
-                    placeholders.each do |source, target|
+                    placeholder_map.each_pair do |source, target|
                       text.sub!(source, target) if source && target
                     end
                   end
