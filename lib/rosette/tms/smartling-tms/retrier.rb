@@ -1,8 +1,8 @@
 # encoding: UTF-8
 
 module Rosette
-  module Integrations
-    class SmartlingIntegration < Integration
+  module Tms
+    module SmartlingTms
 
       class Retrier
         DEFAULT_MAX_RETRIES = 5

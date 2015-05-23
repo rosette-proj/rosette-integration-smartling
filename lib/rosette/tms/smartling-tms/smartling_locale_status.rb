@@ -1,10 +1,10 @@
 # encoding: UTF-8
 
 module Rosette
-  module Integrations
-    class SmartlingIntegration < Integration
-      class SmartlingFile
+  module Tms
+    module SmartlingTms
 
+      class SmartlingLocaleStatus
         attr_reader :repo_name, :commit_id
         attr_reader :phrase_count, :translated_count, :file_uri
 
@@ -38,8 +38,8 @@ module Rosette
         def complete?
           translated_count >= phrase_count
         end
-
       end
+
     end
   end
 end

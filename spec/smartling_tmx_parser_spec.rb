@@ -2,11 +2,11 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations
+include Rosette::Tms::SmartlingTms
 
-describe SmartlingIntegration::SmartlingTmxParser do
+describe SmartlingTmxParser do
   describe '#load' do
-    let(:parser) { SmartlingIntegration::SmartlingTmxParser }
+    let(:parser) { SmartlingTmxParser }
     let(:variant) { 'en:#:foo:#:bar' }
 
     let(:tmx_contents) do

@@ -2,10 +2,10 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations
+include Rosette::Tms::SmartlingTms
 
-describe SmartlingIntegration::SmartlingApi do
-  let(:smartling_api) { SmartlingIntegration::SmartlingApi }
+describe SmartlingApi do
+  let(:smartling_api) { SmartlingApi }
 
   it 'responds to all smartling file api methods' do
     api = smartling_api.new

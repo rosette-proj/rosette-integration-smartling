@@ -5,20 +5,19 @@ require 'digest/sha1'
 require 'thread'
 
 module Rosette
-  module Integrations
-    class SmartlingIntegration < Integration
+  module Tms
+    module SmartlingTms
 
       class TranslationMemory
         DEFAULT_HASH = {}.freeze
         PLURAL_REGEX = /\.?(zero|one|two|few|many|other)\z/
         ALLOW_FUZZY = true
 
-        attr_reader :translation_hash, :rosette_config, :repo_config
+        attr_reader :translation_hash, :configurator
 
-        def initialize(translation_hash, rosette_config, repo_config)
+        def initialize(translation_hash, configurator)
           @translation_hash = translation_hash
-          @rosette_config = rosette_config
-          @repo_config = repo_config
+          @configurator = configurator
           @checksum_mutex = Mutex.new
           @cache_mutex = Mutex.new
         end
@@ -247,7 +246,12 @@ module Rosette
           @checksums ||= {}
         end
 
+        def repo_config
+          configurator.repo_config
+        end
+
       end
+
     end
   end
 end

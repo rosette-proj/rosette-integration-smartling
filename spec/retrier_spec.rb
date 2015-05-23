@@ -2,9 +2,9 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations
+include Rosette::Tms::SmartlingTms
 
-describe SmartlingIntegration::SmartlingApi do
+describe Retrier do
   class RetryError < StandardError; end
 
   class RetryTracker
@@ -19,7 +19,7 @@ describe SmartlingIntegration::SmartlingApi do
     end
   end
 
-  let(:retrier) { SmartlingIntegration::Retrier }
+  let(:retrier) { Retrier }
   let(:error) { RetryError }
   let(:tracker) { RetryTracker.new }
   let(:error_message) { "I'm a little teapot" }

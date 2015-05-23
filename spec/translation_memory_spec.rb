@@ -2,10 +2,10 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations
+include Rosette::Tms::SmartlingTms
 include Rosette::DataStores
 
-describe SmartlingIntegration::TranslationMemory do
+describe TranslationMemory do
   let(:locale_code) { 'de-DE' }
   let(:locale) { repo_config.locales.first }
   let(:meta_key) { "en.#{meta_key_base}" }
@@ -26,6 +26,7 @@ describe SmartlingIntegration::TranslationMemory do
       config.add_repo(repo_name) do |repo_config|
         repo_config.add_locale(locale_code)
         repo_config.add_placeholder_regex(/%\{.+?\}/)
+        repo_config.use_tms('smartling')
       end
     end
   end
@@ -33,6 +34,8 @@ describe SmartlingIntegration::TranslationMemory do
   let(:repo_config) do
     rosette_config.get_repo(repo_name)
   end
+
+  let(:configurator) { repo_config.tms.configurator }
 
   def wrap_placeholders(text)
     text.gsub(/(\{\d+\})/) { "<ph>#{$1}</ph>" }
@@ -53,12 +56,12 @@ describe SmartlingIntegration::TranslationMemory do
   end
 
   let(:memory_hash) do
-    SmartlingIntegration::SmartlingTmxParser.load(tmx_contents)
+    SmartlingTmxParser.load(tmx_contents)
   end
 
   let(:memory) do
-    SmartlingIntegration::TranslationMemory.new(
-      { locale_code => memory_hash }, rosette_config, repo_config
+    TranslationMemory.new(
+      { locale_code => memory_hash }, configurator
     )
   end
 
@@ -85,8 +88,8 @@ describe SmartlingIntegration::TranslationMemory do
     it 'returns the same checksum' do
       expect(memory.checksum_for(locale)).to eq(memory.checksum_for(locale))
 
-      second_memory = SmartlingIntegration::TranslationMemory.new(
-        { locale_code => memory_hash }, rosette_config, repo_config
+      second_memory = TranslationMemory.new(
+        { locale_code => memory_hash }, configurator
       )
 
       expect(second_memory.checksum_for(locale)).to(

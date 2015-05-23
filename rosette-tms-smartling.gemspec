@@ -1,9 +1,9 @@
 $:.unshift File.join(File.dirname(__FILE__), 'lib')
-require 'rosette/integrations/smartling-integration/version'
+require 'rosette/tms/smartling-tms/version'
 
 Gem::Specification.new do |s|
-  s.name     = "rosette-integration-smartling"
-  s.version  = ::Rosette::Integrations::SMARTLING_INTEGRATION_VERSION
+  s.name     = "rosette-tms-smartling"
+  s.version  = ::Rosette::Tms::SmartlingTms::VERSION
   s.authors  = ["Cameron Dutro"]
   s.email    = ["camertron@gmail.com"]
   s.homepage = "http://github.com/camertron"
@@ -20,5 +20,5 @@ Gem::Specification.new do |s|
   s.add_dependency 'tmx-parser', '~> 1.0.0'
 
   s.require_path = 'lib'
-  s.files = Dir["{lib,spec}/**/*", "Gemfile", "History.txt", "README.md", "Rakefile", "rosette-integration-smartling.gemspec"]
+  s.files = Dir["{lib,spec}/**/*", "Gemfile", "History.txt", "README.md", "Rakefile", "rosette-tms-smartling.gemspec"]
 end
