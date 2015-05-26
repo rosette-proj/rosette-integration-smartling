@@ -37,7 +37,7 @@ describe TranslationMemory do
     rosette_config.get_repo(repo_name)
   end
 
-  let(:configurator) { Configurator.new(rosette_config, repo_config) }
+  let(:configurator) { repo_config.tms.configurator }
 
   let(:tmx_contents) do
     TmxFixture.load('single', {

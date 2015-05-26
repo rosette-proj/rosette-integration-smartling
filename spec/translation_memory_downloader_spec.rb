@@ -13,6 +13,13 @@ describe TranslationMemoryDownloader do
   let(:fixture) do
     load_repo_fixture(repo_name) do |config, repo_config|
       repo_config.add_locales(locale_codes)
+      repo_config.use_tms('smartling') do |tms_config|
+        tms_config.set_thread_pool_size(0)
+        tms_config.set_serializer('test/test')
+        tms_config.set_api_options(
+          smartling_api_key: 'fakekey', smartling_project_id: 'fakeid'
+        )
+      end
     end
   end
 
@@ -20,13 +27,7 @@ describe TranslationMemoryDownloader do
   let(:repo_config) { rosette_config.get_repo(repo_name) }
 
   let(:configurator) do
-    SmartlingTms::Configurator.new(rosette_config, repo_config).tap do |tms_config|
-      tms_config.set_thread_pool_size(0)
-      tms_config.set_serializer('test/test')
-      tms_config.set_api_options(
-        smartling_api_key: 'fakekey', smartling_project_id: 'fakeid'
-      )
-    end
+    repo_config.tms.configurator
   end
 
   let(:downloader) { TranslationMemoryDownloader.new(configurator) }

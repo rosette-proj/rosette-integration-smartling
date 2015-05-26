@@ -15,6 +15,9 @@ describe Repository do
   let(:fixture) do
     load_repo_fixture(repo_name) do |config, repo_config|
       repo_config.add_locale(locale_code)
+      repo_config.use_tms('smartling') do |tms_config|
+        tms_config.set_serializer('test/test')
+      end
     end
   end
 
@@ -22,9 +25,7 @@ describe Repository do
   let(:repo_config) { rosette_config.get_repo(repo_name) }
 
   let(:configurator) do
-    SmartlingTms::Configurator.new(rosette_config, repo_config).tap do |tms_config|
-      tms_config.set_serializer('test/test')
-    end
+    repo_config.tms.configurator
   end
 
   let(:repository) { Repository.new(configurator) }
