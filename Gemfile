@@ -11,7 +11,7 @@ group :development, :test do
   gem 'rosette-extractor-yaml', path: '~/workspace/rosette-extractor-yaml'
   gem 'yaml-write-stream'
   gem 'rosette-core', path: '~/workspace/rosette-core'
-  gem 'rosette-test-helpers', path: '~/workspace/rosette-test-helpers'
+  gem 'rosette-test-helpers', github: '~/workspace/rosette-test-helpers'
   gem 'jbundler'
 
   gem 'tmp-repo'
