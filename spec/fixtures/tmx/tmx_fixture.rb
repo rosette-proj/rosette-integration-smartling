@@ -23,7 +23,7 @@ class TmxFixture
       if respond_to?(method_name)
         context[method_name]
       else
-        raise NoMethodError
+        raise NameError, "undefined local variable or method `#{method_name}'"
       end
     end
 

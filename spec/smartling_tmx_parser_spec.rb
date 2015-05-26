@@ -10,17 +10,9 @@ describe SmartlingTmxParser do
     let(:variant) { 'en:#:foo:#:bar' }
 
     let(:tmx_contents) do
-      %Q{
-        <tmx version="1.4">
-          <body>
-            <tu tuid="abc123" segtype="block">
-              <prop type="x-smartling-string-variant">#{variant}</prop>
-              <tuv xml:lang="en-US"><seg>Foobar</seg></tuv>
-              <tuv xml:lang="de-DE"><seg>Fussbar</seg></tuv>
-            </tu>
-          </body>
-        </tmx>
-      }
+      TmxFixture.load('single', {
+        key: 'foobar', meta_key: variant, translation: 'fussbar'
+      })
     end
 
     it 'converts smartling variants to meta keys and removes the leading locale' do
