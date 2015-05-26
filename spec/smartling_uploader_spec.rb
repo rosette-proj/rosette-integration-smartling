@@ -20,28 +20,21 @@ module Rosette
 end
 
 describe SmartlingUploader do
-  let(:repo_name) { 'test_repo' }
+  let(:repo_name) { 'single_commit' }
+  let(:rosette_config) { fixture.config }
+  let(:serializer_id) { 'test/test' }
 
-  let(:rosette_config) do
-    Rosette.build_config do |config|
-      config.add_repo(repo_name) do |repo_config|
-        repo_config.add_serializer('rails', format: 'yaml/rails')
-        repo_config.use_tms('smartling') do |smartling_config|
-          smartling_config.set_serializer(serializer_id)
-          smartling_config.smartling_api.instance_variable_set(
-            :'@api', smartling_api_base
-          )
-        end
+  let(:fixture) do
+    load_repo_fixture(repo_name) do |config, repo_config|
+      repo_config.use_tms('smartling') do |smartling_config|
+        smartling_config.set_serializer(serializer_id)
       end
     end
   end
 
   let(:repo_config) { rosette_config.get_repo(repo_name) }
   let(:configurator) { repo_config.tms.configurator }
-  let(:serializer_id) { 'yaml/rails' }
   let(:file_name) { 'my_file_name' }
-  let(:smartling_api_base) { double(:smartling_api) }
-  let(:integration_config) { repo_config.get_integration('smartling') }
 
   let(:phrases) do
     [InMemoryDataStore::Phrase.create(
@@ -61,9 +54,9 @@ describe SmartlingUploader do
 
   describe '#upload' do
     it 'uploads the phrases' do
-      expect(smartling_api_base).to(
+      expect(configurator.smartling_api).to(
         receive(:upload).with(
-          anything, file_name, 'yaml', anything
+          anything, file_name, nil, anything
         )
       )
 
@@ -78,7 +71,7 @@ describe SmartlingUploader do
       let(:serializer_id) { 'xml/android' }
 
       it 'correctly detects the smartling file type to use' do
-        expect(smartling_api_base).to(
+        expect(configurator.smartling_api).to(
           receive(:upload).with(
             anything, file_name, 'android', anything
           )
