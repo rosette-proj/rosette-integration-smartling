@@ -25,7 +25,7 @@ module Rosette
 
         def store_phrases(phrases, commit_id)
           file = SmartlingFile.new(configurator, commit_id)
-          file.upload(phrases, serializer_id)
+          file.upload(phrases)
         end
 
         def store_phrase(phrase, commit_id)
@@ -75,10 +75,6 @@ module Rosette
 
         def rosette_config
           configurator.rosette_config
-        end
-
-        def serializer_id
-          configurator.serializer_id
         end
       end
 

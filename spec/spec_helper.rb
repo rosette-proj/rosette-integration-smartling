@@ -10,10 +10,28 @@ require 'rosette/tms/smartling-tms'
 require 'rosette/serializers/yaml-serializer'
 require 'rosette/extractors/yaml-extractor'
 require 'rosette/data_stores/in_memory_data_store'
+require 'rosette/test-helpers'
+require 'spec/fixtures/tmx/tmx_fixture'
 require 'tmx-parser'
 
 RSpec.configure do |config|
+  # build all fixtures before tests run
+  Rosette::TestHelpers::Fixtures.build_all
+
+  def load_repo_fixture(*args)
+    Rosette::TestHelpers::Fixtures.load_repo_fixture(*args) do |config, repo_config|
+      repo_config.add_extractor('test/test') do |ext|
+        ext.set_conditions do |conditions|
+          conditions.match_file_extension('.txt')
+        end
+      end
+
+      yield config, repo_config if block_given?
+    end
+  end
+
   config.after(:each) do
+    Rosette::TestHelpers::Fixtures.cleanup
     Rosette::DataStores::InMemoryDataStore.all_entries.clear
   end
 
@@ -83,11 +101,4 @@ RSpec.configure do |config|
   end
 end
 
-class NilLogger
-  def info(msg); end
-  def warn(msg); end
-  def error(msg); end
-  def write(msg); end
-end
-
-Rosette.logger = NilLogger.new
+Rosette.logger = NullLogger.new

@@ -55,17 +55,7 @@ module Rosette
 
         def drain_pool(pool, total)
           pool.shutdown
-          last_completed_count = 0
-
-          while pool.shuttingdown?
-            current_completed_count = pool.completed_task_count
-
-            # if current_completed_count > last_completed_count
-            #   logger.info("Downloading locale #{current_completed_count} of #{total}")
-            # end
-
-            last_completed_count = current_completed_count
-          end
+          sleep 0.5 while pool.shuttingdown?
         end
 
         def download(locale)

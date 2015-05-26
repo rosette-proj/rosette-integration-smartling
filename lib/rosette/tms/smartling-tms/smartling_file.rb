@@ -20,14 +20,6 @@ module Rosette
           end
         end
 
-        def locale_statuses
-          @statuses ||= repo_config.locales.each_with_object({}) do |locale, ret|
-            ret[locale.code] = SmartlingLocaleStatus.from_api_response(
-              fetch_status(locale)
-            )
-          end
-        end
-
         def file_uri
           rev_commit = repo_config.repo.get_rev_commit(commit_id)
 
@@ -44,7 +36,7 @@ module Rosette
           )
         end
 
-        def upload(phrases, serializer_id)
+        def upload(phrases)
           SmartlingUploader.new(configurator)
             .set_phrases(phrases)
             .set_file_uri(file_uri)
@@ -66,6 +58,14 @@ module Rosette
         end
 
         protected
+
+        def locale_statuses
+          @statuses ||= repo_config.locales.each_with_object({}) do |locale, ret|
+            ret[locale.code] = SmartlingLocaleStatus.from_api_response(
+              fetch_status(locale)
+            )
+          end
+        end
 
         def fetch_status(locale)
           retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
