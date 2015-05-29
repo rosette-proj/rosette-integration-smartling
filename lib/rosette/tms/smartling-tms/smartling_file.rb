@@ -74,9 +74,27 @@ module Rosette
 
           retrier
             .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
-            .on_error(RuntimeError, message: /VALIDATION_ERROR/, backoff: true)
-            .on_error(Exception)
             .execute
+
+        rescue RuntimeError => e
+          if is_non_existent_file_error?(e)
+            build_nil_status
+          else
+            raise e
+          end
+        end
+
+        def build_nil_status
+          {
+            'fileUri' => file_uri,
+            'stringCount' => 0,
+            'completedStringCount' => 0
+          }
+        end
+
+        def is_non_existent_file_error?(e)
+          e.message.include?('VALIDATION_ERROR') &&
+            e.message.include?('could not be found')
         end
 
         def get_identity_string(rev_commit)
