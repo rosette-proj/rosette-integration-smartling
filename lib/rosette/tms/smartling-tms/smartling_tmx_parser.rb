@@ -3,8 +3,8 @@
 require 'tmx-parser'
 
 module Rosette
-  module Integrations
-    class SmartlingIntegration < Integration
+  module Tms
+    module SmartlingTms
 
       class SmartlingTmxParser
         VARIANT_PROP = 'x-smartling-string-variant'

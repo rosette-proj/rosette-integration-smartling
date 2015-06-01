@@ -1,8 +1,8 @@
 # encoding: UTF-8
 
 module Rosette
-  module Integrations
-    class SmartlingIntegration < Integration
+  module Tms
+    module SmartlingTms
 
       # wrapper around the smartling api that takes additional options
       class SmartlingApi

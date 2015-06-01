@@ -2,30 +2,33 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations
+include Rosette::Tms::SmartlingTms
 include Rosette::DataStores
 
-describe SmartlingIntegration::TranslationMemory do
+describe TranslationMemory do
   let(:locale_code) { 'de-DE' }
   let(:locale) { repo_config.locales.first }
   let(:meta_key) { "en.#{meta_key_base}" }
   let(:meta_key_base) { 'teapot' }
   let(:key) { "I'm a little teapot" }
   let(:translation) { "Soy una tetera pequeña" }
-  let(:repo_name) { 'test_repo' }
+  let(:repo_name) { 'single_commit' }
   let(:phrase) do
     InMemoryDataStore::Phrase.create(
       key: key, meta_key: meta_key_base
     )
   end
 
-  let(:rosette_config) do
-    Rosette.build_config do |config|
+  let(:rosette_config) { fixture.config }
+
+  let(:fixture) do
+    load_repo_fixture(repo_name) do |config, repo_config|
       config.use_datastore('in-memory')
       config.use_error_reporter(Rosette::Core::RaisingErrorReporter.new)
       config.add_repo(repo_name) do |repo_config|
         repo_config.add_locale(locale_code)
         repo_config.add_placeholder_regex(/%\{.+?\}/)
+        repo_config.use_tms('smartling')
       end
     end
   end
@@ -34,59 +37,32 @@ describe SmartlingIntegration::TranslationMemory do
     rosette_config.get_repo(repo_name)
   end
 
-  def wrap_placeholders(text)
-    text.gsub(/(\{\d+\})/) { "<ph>#{$1}</ph>" }
-  end
+  let(:configurator) { repo_config.tms.configurator }
 
   let(:tmx_contents) do
-    %Q{
-      <tmx version="1.4">
-        <body>
-          <tu tuid="abc123" segtype="block">
-            <prop type="x-smartling-string-variant">#{meta_key}</prop>
-            <tuv xml:lang="en-US"><seg>#{wrap_placeholders(key)}</seg></tuv>
-            <tuv xml:lang="de-DE"><seg>#{wrap_placeholders(translation)}</seg></tuv>
-          </tu>
-        </body>
-      </tmx>
-    }
+    TmxFixture.load('single', {
+      meta_key: meta_key, key: key, translation: translation
+    })
   end
 
   let(:memory_hash) do
-    SmartlingIntegration::SmartlingTmxParser.load(tmx_contents)
+    SmartlingTmxParser.load(tmx_contents)
   end
 
   let(:memory) do
-    SmartlingIntegration::TranslationMemory.new(
-      { locale_code => memory_hash }, rosette_config, repo_config
+    TranslationMemory.new(
+      { locale_code => memory_hash }, configurator
     )
   end
 
   describe '#checksum_for' do
-    let(:tmx_contents) do
-      %Q{
-        <tmx version="1.4">
-          <body>
-            <tu tuid="abc123" segtype="block">
-              <prop type="x-smartling-string-variant">foo.bar</prop>
-              <tuv xml:lang="en-US"><seg>foobar</seg></tuv>
-              <tuv xml:lang="de-DE"><seg>foosbar</seg></tuv>
-            </tu>
-            <tu tuid="def456" segtype="block">
-              <prop type="x-smartling-string-variant">foo.bar.baz</prop>
-              <tuv xml:lang="de-DE"><seg>foosbarbeitsch</seg></tuv>
-              <tuv xml:lang="en-US"><seg>foobarbaz</seg></tuv>
-            </tu>
-          </body>
-        </tmx>
-      }
-    end
+    let(:tmx_contents) { TmxFixture.load('double') }
 
     it 'returns the same checksum' do
       expect(memory.checksum_for(locale)).to eq(memory.checksum_for(locale))
 
-      second_memory = SmartlingIntegration::TranslationMemory.new(
-        { locale_code => memory_hash }, rosette_config, repo_config
+      second_memory = TranslationMemory.new(
+        { locale_code => memory_hash }, configurator
       )
 
       expect(second_memory.checksum_for(locale)).to(
@@ -128,34 +104,7 @@ describe SmartlingIntegration::TranslationMemory do
     end
 
     context 'with a translation memory containing plurals' do
-      let(:tmx_contents) do
-        %Q{
-          <tmx version="1.4">
-            <body>
-              <tu tuid="abc123" segtype="block">
-                <prop type="x-smartling-string-variant">#{meta_key}.one</prop>
-                <tuv xml:lang="en-US"><seg>DIY singular</seg></tuv>
-                <tuv xml:lang="de-DE"><seg>DIY german singular</seg></tuv>
-              </tu>
-              <tu tuid="def456" segtype="block">
-                <prop type="x-smartling-string-variant">#{meta_key}.other</prop>
-                <tuv xml:lang="en-US"><seg>DIY plural</seg></tuv>
-                <tuv xml:lang="de-DE"><seg>DIY german plural</seg></tuv>
-              </tu>
-              <tu tuid="ghi789[one]" segtype="block">
-                <prop type="x-smartling-string-variant">#{meta_key}</prop>
-                <tuv xml:lang="en-US"><seg>Smartling singular</seg></tuv>
-                <tuv xml:lang="de-DE"><seg>Smartling german singular</seg></tuv>
-              </tu>
-              <tu tuid="ghi789[other]" segtype="block">
-                <prop type="x-smartling-string-variant">#{meta_key}</prop>
-                <tuv xml:lang="en-US"><seg>Smartling plural</seg></tuv>
-                <tuv xml:lang="de-DE"><seg>Smartling german plural</seg></tuv>
-              </tu>
-            </body>
-          </tmx>
-        }
-      end
+      let(:tmx_contents) { TmxFixture.load('plurals', meta_key: meta_key) }
 
       it 'defaults to smartling-style plurals' do
         phrase = InMemoryDataStore::Phrase.create(
@@ -191,22 +140,7 @@ describe SmartlingIntegration::TranslationMemory do
 
     context 'with a translation memory containing duplicate meta keys' do
       let(:tmx_contents) do
-        %Q{
-          <tmx version="1.4">
-            <body>
-              <tu tuid="abc123" segtype="block">
-                <prop type="x-smartling-string-variant">#{meta_key}</prop>
-                <tuv xml:lang="en-US"><seg>first value</seg></tuv>
-                <tuv xml:lang="de-DE"><seg>first value german</seg></tuv>
-              </tu>
-              <tu tuid="def456" segtype="block">
-                <prop type="x-smartling-string-variant">#{meta_key}</prop>
-                <tuv xml:lang="en-US"><seg>second value</seg></tuv>
-                <tuv xml:lang="de-DE"><seg>second value german</seg></tuv>
-              </tu>
-            </body>
-          </tmx>
-        }
+        TmxFixture.load('duplicate_meta_keys', meta_key: meta_key)
       end
 
       it 'returns the correct translation using the phrase key to disambiguate' do
@@ -243,17 +177,11 @@ describe SmartlingIntegration::TranslationMemory do
 
     context 'with a translation memory containing non-normalized text' do
       let(:tmx_contents) do
-        %Q{
-          <tmx version="1.4">
-            <body>
-              <tu tuid="abc123" segtype="block">
-                <prop type="x-smartling-string-variant">#{meta_key}</prop>
-                <tuv xml:lang="en-US"><seg>#{[101, 115, 112, 97, 110, 771, 111, 108].pack("U*")}</seg></tuv>
-                <tuv xml:lang="de-DE"><seg>spanish</seg></tuv>
-              </tu>
-            </body>
-          </tmx>
-        }
+        TmxFixture.load('single', {
+          key: [101, 115, 112, 97, 110, 771, 111, 108].pack("U*"),  # español
+          meta_key: meta_key,
+          translation: 'spanish'
+        })
       end
 
       it 'normalizes the string when comparing' do

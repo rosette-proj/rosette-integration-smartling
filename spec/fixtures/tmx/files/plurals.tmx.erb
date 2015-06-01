@@ -1,0 +1,24 @@
+<tmx version="1.4">
+  <body>
+    <tu tuid="abc123" segtype="block">
+      <prop type="x-smartling-string-variant"><%= meta_key %>.one</prop>
+      <tuv xml:lang="en-US"><seg>DIY singular</seg></tuv>
+      <tuv xml:lang="de-DE"><seg>DIY german singular</seg></tuv>
+    </tu>
+    <tu tuid="def456" segtype="block">
+      <prop type="x-smartling-string-variant"><%= meta_key %>.other</prop>
+      <tuv xml:lang="en-US"><seg>DIY plural</seg></tuv>
+      <tuv xml:lang="de-DE"><seg>DIY german plural</seg></tuv>
+    </tu>
+    <tu tuid="ghi789[one]" segtype="block">
+      <prop type="x-smartling-string-variant"><%= meta_key %></prop>
+      <tuv xml:lang="en-US"><seg>Smartling singular</seg></tuv>
+      <tuv xml:lang="de-DE"><seg>Smartling german singular</seg></tuv>
+    </tu>
+    <tu tuid="ghi789[other]" segtype="block">
+      <prop type="x-smartling-string-variant"><%= meta_key %></prop>
+      <tuv xml:lang="en-US"><seg>Smartling plural</seg></tuv>
+      <tuv xml:lang="de-DE"><seg>Smartling german plural</seg></tuv>
+    </tu>
+  </body>
+</tmx>

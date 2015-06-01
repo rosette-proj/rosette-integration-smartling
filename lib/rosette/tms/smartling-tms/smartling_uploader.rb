@@ -1,8 +1,8 @@
 # encoding: UTF-8
 
 module Rosette
-  module Integrations
-    class SmartlingIntegration < Integration
+  module Tms
+    module SmartlingTms
       class SmartlingUploader
 
         FILE_TYPES =
@@ -13,16 +13,10 @@ module Rosette
           'xml/android' => 'android'
         }
 
-        attr_reader :rosette_config, :repo_config
-        attr_reader :phrases, :file_name, :commit_id, :serializer_id
+        attr_reader :configurator, :phrases, :file_uri
 
-        def initialize(rosette_config)
-          @rosette_config = rosette_config
-        end
-
-        def set_repo_config(repo_config)
-          @repo_config = repo_config
-          self
+        def initialize(configurator)
+          @configurator = configurator
         end
 
         def set_phrases(phrases)
@@ -30,19 +24,8 @@ module Rosette
           self
         end
 
-        def set_file_name(file_name)
-          @file_name = file_name
-          self
-        end
-
-        def set_serializer_id(serializer_id)
-          @serializer_id = serializer_id
-          self
-        end
-
-        # if this isn't set, uses the default api
-        def set_smartling_api(smartling_api)
-          @smartling_api = smartling_api
+        def set_file_uri(file_uri)
+          @file_uri = file_uri
           self
         end
 
@@ -50,9 +33,7 @@ module Rosette
           retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
             file_for_upload do |tmp_file|
               smartling_api.upload(
-                tmp_file.path,
-                destination_file_uri,
-                file_type, {
+                tmp_file.path, file_uri, file_type, {
                   approved: smartling_api.preapprove_translations?
                 }
               )
@@ -64,13 +45,6 @@ module Rosette
             .on_error(RuntimeError, message: /VALIDATION_ERROR/, backoff: true)
             .on_error(Exception)
             .execute
-        end
-
-        def destination_file_uri
-          @destination_file_name ||= File.join(
-            repo_config.name,
-            "#{file_name}#{serializer_const.default_extension}"
-          )
         end
 
         private
@@ -130,15 +104,19 @@ module Rosette
         end
 
         def directives
-          integration_config.configuration.directives
+          configurator.directives
         end
 
-        def integration_config
-          @integration_config ||= repo_config.get_integration('smartling')
+        def serializer_id
+          configurator.serializer_id
+        end
+
+        def repo_config
+          configurator.repo_config
         end
 
         def smartling_api
-          @smartling_api ||= integration_config.smartling_api
+          configurator.smartling_api
         end
 
       end

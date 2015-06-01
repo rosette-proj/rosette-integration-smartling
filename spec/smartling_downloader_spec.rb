@@ -2,10 +2,10 @@
 
 require 'spec_helper'
 
-include Rosette::Integrations
+include Rosette::Tms::SmartlingTms
 
-describe SmartlingIntegration::SmartlingDownloader do
-  let(:downloader) { SmartlingIntegration::SmartlingDownloader }
+describe SmartlingDownloader do
+  let(:downloader) { SmartlingDownloader }
   let(:smartling_api) { double(:api) }
   let(:file_uri) { 'path/to/fake.yml' }
   let(:locale) { Rosette::Core::Locale.parse('de-DE') }

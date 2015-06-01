@@ -1,8 +1,8 @@
 # encoding: UTF-8
 
 module Rosette
-  module Integrations
-    class SmartlingIntegration < Integration
+  module Tms
+    module SmartlingTms
       class SmartlingDownloader
 
         def self.download_file(smartling_api, file_uri, locale)
