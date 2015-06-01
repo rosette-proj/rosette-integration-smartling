@@ -5,7 +5,7 @@ module Rosette
     module SmartlingTms
 
       class Configurator
-        DEFAULT_PULL_EXPIRATION = 60 * 60  # one hour
+        DEFAULT_PULL_EXPIRATION = 3600  # one hour in seconds
         DEFAULT_THREAD_POOL_SIZE = 10
 
         attr_reader :rosette_config, :repo_config

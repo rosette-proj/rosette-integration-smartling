@@ -37,7 +37,7 @@ module Rosette
 
         def build_asynchronously
           pool = Concurrent::FixedThreadPool.new(configurator.thread_pool_size)
-          hash_mutex ||= Mutex.new
+          hash_mutex = Mutex.new
           total = 0
 
           result = repo_config.locales.each_with_object({}) do |locale, ret|
