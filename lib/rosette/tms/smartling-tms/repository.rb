@@ -1,6 +1,7 @@
 # encoding: UTF-8
 
 require 'rosette/tms'
+require 'thread'
 
 module Rosette
   module Tms
@@ -11,6 +12,7 @@ module Rosette
 
         def initialize(configurator)
           @configurator = configurator
+          @refresh_mutex = Mutex.new
         end
 
         def lookup_translations(locale, phrases)
@@ -55,16 +57,30 @@ module Rosette
 
         def refresh_memory
           fetch_options = { expires_in: configurator.pull_expiration }
-          rosette_config.cache.fetch(repo_config.name, fetch_options) do
-            memory_hash = download_memory
 
-            parsed = memory_hash.each_with_object({}) do |(locale, raw_tmx), ret|
-              ret[locale] = SmartlingTmxParser.load(raw_tmx)
+          memory_hash = rosette_config.cache.fetch(cache_key, fetch_options) do
+            download_memory.tap do |memory_hash|
+              @memory = parse_memory_hash(memory_hash)
             end
-
-            @memory = TranslationMemory.new(parsed, configurator)
-            memory_hash
           end
+
+          @refresh_mutex.synchronize do
+            # just in case the cache was already warm
+            @memory ||= parse_memory_hash(memory_hash)
+          end
+        end
+
+        def parse_memory_hash(memory_hash)
+          parsed = memory_hash.each_with_object({}) do |(locale, raw_tmx), ret|
+            ret[locale] = SmartlingTmxParser.load(raw_tmx)
+          end
+
+          TranslationMemory.new(parsed, configurator)
+        end
+
+        def cache_key
+          @cache_key ||=
+            "rosette-tms-smartling/translation-memories/#{repo_config.name}"
         end
 
         def download_memory
