@@ -49,19 +49,21 @@ module Rosette
         protected
 
         def memory
-          @memory ||= begin
+          refresh_memory
+          @memory
+        end
+
+        def refresh_memory
+          fetch_options = { expires_in: configurator.pull_expiration }
+          rosette_config.cache.fetch(repo_config.name, fetch_options) do
+            memory_hash = download_memory
+
             parsed = memory_hash.each_with_object({}) do |(locale, raw_tmx), ret|
               ret[locale] = SmartlingTmxParser.load(raw_tmx)
             end
 
-            TranslationMemory.new(parsed, configurator)
-          end
-        end
-
-        def memory_hash
-          fetch_options = { expires_in: configurator.pull_expiration }
-          rosette_config.cache.fetch(repo_config.name, fetch_options) do
-            download_memory
+            @memory = TranslationMemory.new(parsed, configurator)
+            memory_hash
           end
         end
 
