@@ -5,11 +5,11 @@ module Rosette
     module SmartlingTms
 
       class Configurator
-        DEFAULT_PULL_EXPIRATION = 3600  # one hour in seconds
+        DEFAULT_PARSE_FREQUENCY = 3600  # one hour in seconds
         DEFAULT_THREAD_POOL_SIZE = 10
 
         attr_reader :rosette_config, :repo_config
-        attr_reader :api_options, :serializer_id, :directives, :pull_expiration
+        attr_reader :api_options, :serializer_id, :directives, :parse_frequency
         attr_reader :thread_pool_size
 
         def initialize(rosette_config, repo_config)
@@ -19,7 +19,7 @@ module Rosette
           @rosette_config = rosette_config
           @repo_config = repo_config
           @thread_pool_size = DEFAULT_THREAD_POOL_SIZE
-          @pull_expiration = DEFAULT_PULL_EXPIRATION
+          @parse_frequency = DEFAULT_PARSE_FREQUENCY
         end
 
         # Options used to build a SmartlingApi that can communicate with the
@@ -38,8 +38,8 @@ module Rosette
           @serializer_id = serializer_id
         end
 
-        def set_pull_expiration(pull_expiration)
-          @pull_expiration = pull_expiration
+        def set_parse_frequency(parse_frequency)
+          @parse_frequency = parse_frequency
         end
 
         def set_thread_pool_size(thread_pool_size)

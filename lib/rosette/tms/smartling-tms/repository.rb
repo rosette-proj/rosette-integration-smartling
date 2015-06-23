@@ -8,11 +8,12 @@ module Rosette
     module SmartlingTms
 
       class Repository < Rosette::Tms::Repository
-        attr_reader :configurator
+        attr_reader :configurator, :last_parse_time
 
         def initialize(configurator)
           @configurator = configurator
           @refresh_mutex = Mutex.new
+          @last_parse_time = 0
         end
 
         def lookup_translations(locale, phrases)
@@ -48,26 +49,37 @@ module Rosette
           file.delete
         end
 
+        def re_download_memory
+          @refresh_mutex.synchronize do
+            rosette_config.cache.write(memory_hash_cache_key, download_memory)
+            @last_parse_time = 0  # force a re-parse
+          end
+        end
+
         protected
 
         def memory
-          refresh_memory
-          @memory
+          @refresh_mutex.synchronize do
+            refresh_memory
+            @memory
+          end
         end
 
         def refresh_memory
-          fetch_options = { expires_in: configurator.pull_expiration }
-
-          memory_hash = rosette_config.cache.fetch(cache_key, fetch_options) do
-            download_memory.tap do |memory_hash|
-              @memory = parse_memory_hash(memory_hash)
+          if memory_requires_refresh?
+            memory_hash = rosette_config.cache.fetch(memory_hash_cache_key) do
+              download_memory  # just in case
             end
-          end
 
-          @refresh_mutex.synchronize do
-            # just in case the cache was already warm
-            @memory ||= parse_memory_hash(memory_hash)
+            @memory = parse_memory_hash(memory_hash)
+            @last_parse_time = Time.now.to_i
           end
+        end
+
+        def memory_requires_refresh?
+          @memory.nil? || (
+            (Time.now.to_i - last_parse_time) > configurator.parse_frequency
+          )
         end
 
         def parse_memory_hash(memory_hash)
@@ -78,9 +90,9 @@ module Rosette
           TranslationMemory.new(parsed, configurator)
         end
 
-        def cache_key
-          @cache_key ||=
-            "rosette-tms-smartling/translation-memories/#{repo_config.name}"
+        def memory_hash_cache_key
+          @memory_hash_cache_key ||=
+            "rosette-tms-smartling/translation-memories/#{repo_config.name}/memory_hash"
         end
 
         def download_memory
