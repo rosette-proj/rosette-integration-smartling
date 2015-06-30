@@ -34,7 +34,7 @@ module Rosette
 
             handler_class = handler_classes.find do |handler_class|
               options = errors.fetch(handler_class, {}).fetch(:options, {})
-              should_have_rescued?(e, options)
+              should_have_rescued?(e, handler_class, options)
             end
 
             handler = errors[handler_class]
@@ -65,9 +65,17 @@ module Rosette
           end
         end
 
-        def should_have_rescued?(error, options)
-          regex = options.fetch(:message, //)
-          !!(error.message =~ regex)
+        def should_have_rescued?(error, handler_class, options)
+          # check that handler_class is either an exact match to the error's
+          # class or a superclass
+          class_matches = error.class == handler_class ||
+            error.class < handler_class
+
+          if regex = options[:message]
+            class_matches && !!(error.message =~ regex)
+          else
+            class_matches
+          end
         end
 
         def calc_sleep_time(retries, options)

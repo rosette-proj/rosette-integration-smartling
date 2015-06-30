@@ -1,5 +1,7 @@
 # encoding: UTF-8
 
+require 'socket'
+
 module Rosette
   module Tms
     module SmartlingTms
@@ -74,6 +76,8 @@ module Rosette
 
           retrier
             .on_error(RuntimeError, message: /RESOURCE_LOCKED/, backoff: true)
+            .on_error(Errno::ECONNREFUSED, backoff: true)
+            .on_error(SocketError, backoff: true)
             .execute
 
         rescue RuntimeError => e
