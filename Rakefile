@@ -8,7 +8,7 @@ require 'bundler'
 require 'rspec/core/rake_task'
 require 'rubygems/package_task'
 
-require 'rosette/integrations/smartling-integration'
+require 'rosette/tms/smartling-tms'
 
 Bundler::GemHelper.install_tasks
 
