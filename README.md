@@ -26,8 +26,10 @@ require 'rosette/serializers/yaml-serializer'
 
 rosette_config = Rosette.build_config do |config|
   config.add_repo('my-awesome-repo') do |repo_config|
+    repo_config.add_serializer('rails', format: 'yaml/rails')
+
     repo_config.use_tms('smartling') do |tms_config|
-      tms_config.set_serializer('yaml/rails')
+      tms_config.set_serializer('yaml/rails')  # must add to repo_config above
       tms_config.set_api_options(
         smartling_api_key: 'fookey', smartling_project_id: 'fooid'
       )
