@@ -47,7 +47,6 @@ rosette-tms-smartling supports additional configuration options:
 Smartling directives give Smartling special instructions regarding how to interpret the files you send it. See [their documentation](http://docs.smartling.com/pages/supported-file-types/) for the supported directives for your file type. Note: Rosette determines the file type from the serializer you've told it to use, i.e. whatever you passed to `#set_serializer`.
 
 ```ruby
-repo_config.add_serializer('rails', format: 'yaml/rails')
 repo_config.use_tms('smartling') do |tms_config|
   tms_config.set_directives(%Q[
     # smartling.plurals_detection = off
