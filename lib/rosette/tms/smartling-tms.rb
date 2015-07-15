@@ -1,7 +1,7 @@
 # encoding: UTF-8
 
 require 'smartling'
-require 'rosette/integrations'
+require 'rosette/tms'
 
 module Rosette
   module Tms

@@ -1,6 +1,4 @@
 Gemfile.lock
-Jarfile.lock
 .DS_Store
 pkg/
-.jbundler/
-.ruby-version
+classpath.txt

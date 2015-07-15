@@ -4,18 +4,20 @@ ruby '2.0.0', engine: 'jruby', engine_version: '1.7.15'
 
 gemspec
 
-group :development, :test do
-  gem 'rosette-datastore-memory', path: '~/workspace/rosette-datastore-memory'
-  gem 'activemodel'
-  gem 'yaml-write-stream'
-  gem 'rosette-core', path: '~/workspace/rosette-core'
-  gem 'rosette-test-helpers', github: 'rosette-proj/rosette-test-helpers'
-  gem 'jbundler'
+gem 'rosette-core', github: 'rosette-proj/rosette-core'
 
-  gem 'tmp-repo'
+group :development, :test do
+  gem 'activemodel'
+  gem 'expert', '~> 1.0.0'
   gem 'pry', '~> 0.9.0'
   gem 'pry-nav'
-  gem 'factory_girl', '~> 4.4.0'
   gem 'rake'
+end
+
+group :test do
+  gem 'codeclimate-test-reporter', require: nil
+  gem 'factory_girl', '~> 4.4.0'
+  gem 'rosette-datastore-memory', github: 'rosette-proj/rosette-datastore-memory'
+  gem 'rosette-test-helpers', github: 'rosette-proj/rosette-test-helpers'
   gem 'rspec'
 end
