@@ -8,11 +8,32 @@ include Rosette::Core
 include Rosette::DataStores
 
 describe SmartlingFile do
+  class Probe
+    attr_reader :counter
+
+    def initialize(error_klass, message)
+      @error_klass = error_klass
+      @message = message
+      @counter = 0
+    end
+
+    def delete(*args)
+      if counter == 0
+        raise @error_klass, @message
+      end
+    ensure
+      @counter += 1
+    end
+  end
+
   let(:repo_name) { 'single_commit' }
   let(:locale_code) { 'de-DE' }
   let(:locale) { repo_config.locales.first }
   let(:commit_id) { fixture.repo.git('rev-parse HEAD').strip }
   let(:git_user) { fixture.repo.git('config user.name').gsub(/[^\w]/, '') }
+  let(:not_found_error_message) do
+    "VALIDATION_ERROR The file #{file.file_uri} could not be found"
+  end
 
   let(:fixture) do
     load_repo_fixture(repo_name) do |config, repo_config|
@@ -82,6 +103,20 @@ describe SmartlingFile do
 
         file.delete
       end
+
+      it 'retries on error' do
+        probe = Probe.new(StandardError, 'test test test')
+        allow(configurator).to receive(:smartling_api).and_return(probe)
+        file.delete
+        expect(probe.counter).to eq(2)
+      end
+
+      it "does not retry or raise an error if the file doesn't exist" do
+        probe = Probe.new(RuntimeError, not_found_error_message)
+        allow(configurator).to receive(:smartling_api).and_return(probe)
+        expect { file.delete }.to_not raise_error
+        expect(probe.counter).to eq(1)
+      end
     end
 
     describe '#translation_status' do
@@ -97,7 +132,7 @@ describe SmartlingFile do
     it "returns a nil status if the file can't be found in smartling" do
       expect(configurator.smartling_api).to(
         receive(:status).and_raise(
-          RuntimeError, "VALIDATION_ERROR The file #{file.file_uri} could not be found"
+          RuntimeError, not_found_error_message
         )
       )
 

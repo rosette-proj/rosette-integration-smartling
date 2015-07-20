@@ -47,7 +47,15 @@ module Rosette
 
         def delete
           Retrier.retry(times: 3) do
-            smartling_api.delete(file_uri)
+            begin
+              smartling_api.delete(file_uri)
+            rescue RuntimeError => e
+              file_missing = e.message.include?('VALIDATION_ERROR') &&
+                e.message.include?('could not be found')
+
+              # only retry if the file potentially exists
+              raise e unless file_missing
+            end
           end.on_error(Exception).execute
         end
 
