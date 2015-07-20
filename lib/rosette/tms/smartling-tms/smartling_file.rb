@@ -50,11 +50,10 @@ module Rosette
             begin
               smartling_api.delete(file_uri)
             rescue RuntimeError => e
-              file_missing = e.message.include?('VALIDATION_ERROR') &&
-                e.message.include?('could not be found')
-
               # only retry if the file potentially exists
-              raise e unless file_missing
+              unless is_non_existent_file_error?(e)
+                raise e
+              end
             end
           end.on_error(Exception).execute
         end
@@ -79,7 +78,15 @@ module Rosette
 
         def fetch_status(locale)
           retrier = Retrier.retry(times: 9, base_sleep_seconds: 2) do
-            smartling_api.status(file_uri, locale: locale.code)
+            begin
+              smartling_api.status(file_uri, locale: locale.code)
+            rescue RuntimeError => e
+              if is_non_existent_file_error?(e)
+                build_nil_status
+              else
+                raise e
+              end
+            end
           end
 
           retrier
@@ -87,13 +94,6 @@ module Rosette
             .on_error(Errno::ECONNREFUSED, backoff: true)
             .on_error(SocketError, backoff: true)
             .execute
-
-        rescue RuntimeError => e
-          if is_non_existent_file_error?(e)
-            build_nil_status
-          else
-            raise e
-          end
         end
 
         def build_nil_status
