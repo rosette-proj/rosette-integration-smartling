@@ -11,7 +11,6 @@ module Rosette
       class TranslationMemory
         DEFAULT_HASH = {}.freeze
         PLURAL_REGEX = /\.?(zero|one|two|few|many|other)\z/
-        ALLOW_FUZZY = true
         PLACEHOLDER_TYPE = 'x-smartling-placeholder'
 
         attr_reader :translation_hash, :configurator
@@ -71,14 +70,12 @@ module Rosette
           # try to get the most recent one
           unit = unit_candidates.last
 
-          # If no unit can be found via an exact match, return the first one
-          # in the list. We know the meta key matches, but it's possible the
-          # key has changed.
-          unit ||= units.first if ALLOW_FUZZY
-
+          # If no unit can be found, return the original English string
           if unit && variant = find_variant(unit, locale)
             placeholder_map = build_placeholder_map(phrase, unit)
             resolve_variant(variant, placeholder_map)
+          else
+            phrase.key
           end
         end
 
