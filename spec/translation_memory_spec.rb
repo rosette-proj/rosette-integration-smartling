@@ -156,13 +156,13 @@ describe TranslationMemory do
         expect(trans).to eq('second value german')
       end
 
-      it 'returns the first exact meta key match if no key matches' do
+      it 'returns the english text if no key matches' do
         phrase = InMemoryDataStore::Phrase.create(
           key: 'foofoofoo', meta_key: "#{meta_key_base}"
         )
 
         trans = memory.translation_for(locale, phrase)
-        expect(trans).to eq('first value german')
+        expect(trans).to eq('foofoofoo')
       end
 
       it 'returns nil if no match' do
@@ -171,7 +171,7 @@ describe TranslationMemory do
         )
 
         trans = memory.translation_for(locale, phrase)
-        expect(trans).to be_nil
+        expect(trans).to eq('foofoofoo')
       end
     end
 
