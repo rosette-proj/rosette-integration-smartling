@@ -175,6 +175,44 @@ describe TranslationMemory do
       end
     end
 
+    context 'with a translation containing html tags' do
+      let(:tmx_contents) do
+        TmxFixture.load('html')
+      end
+
+      it 'includes all HTML tags in translation' do
+        phrase = InMemoryDataStore::Phrase.create(
+          key: 'Director of Privacy <br/>Lumos Labs',
+          meta_key: 'legal.privacies.show'
+        )
+
+        trans = memory.translation_for(locale, phrase)
+
+        expect(trans).to(
+          eq('Datenschutzbeauftragter <br/>Lumos Labs')
+        )
+      end
+    end
+
+    context 'with a translation containing a placeholder' do
+      let(:tmx_contents) do
+        TmxFixture.load('placeholders')
+      end
+
+      it 'does not replace mismatched placeholders' do
+        phrase = InMemoryDataStore::Phrase.create(
+          key: 'Click on Lumos Labs',
+          meta_key: 'foo.bar.baz'
+        )
+
+        trans = memory.translation_for(locale, phrase)
+
+        expect(trans).to(
+          eq('Klicke auf {0} Lumos Labs')
+        )
+      end
+    end
+
     context 'with a translation memory containing non-normalized text' do
       let(:tmx_contents) do
         TmxFixture.load('single', {

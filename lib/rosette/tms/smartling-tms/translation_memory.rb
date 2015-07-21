@@ -12,6 +12,7 @@ module Rosette
         DEFAULT_HASH = {}.freeze
         PLURAL_REGEX = /\.?(zero|one|two|few|many|other)\z/
         ALLOW_FUZZY = true
+        PLACEHOLDER_TYPE = 'x-smartling-placeholder'
 
         attr_reader :translation_hash, :configurator
 
@@ -143,7 +144,13 @@ module Rosette
           variant.elements.each_with_object('') do |el, ret|
             ret << case el
               when TmxParser::Placeholder
-                placeholder_map[el.text] || ''
+                case el.type
+                  when PLACEHOLDER_TYPE
+                    # if placeholder can't be found, replace with original text
+                    placeholder_map[el.text] || el.text
+                  else
+                    el.text
+                end
               else
                 str = el.respond_to?(:text) ? el.text : el
 
