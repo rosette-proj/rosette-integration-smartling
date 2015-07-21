@@ -141,12 +141,11 @@ module Rosette
           variant.elements.each_with_object('') do |el, ret|
             ret << case el
               when TmxParser::Placeholder
-                case el.type
-                  when PLACEHOLDER_TYPE
-                    # if placeholder can't be found, replace with original text
-                    placeholder_map[el.text] || el.text
-                  else
-                    el.text
+                if el.type == PLACEHOLDER_TYPE
+                  # if placeholder can't be found, replace with original text
+                  placeholder_map[el.text] || el.text
+                else
+                  el.text
                 end
               else
                 str = el.respond_to?(:text) ? el.text : el
