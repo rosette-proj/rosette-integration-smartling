@@ -201,14 +201,14 @@ describe TranslationMemory do
 
       it 'does not replace mismatched placeholders' do
         phrase = InMemoryDataStore::Phrase.create(
-          key: 'Click on Lumos Labs',
+          key: 'Click on Lumos %{foo} Labs',
           meta_key: 'foo.bar.baz'
         )
 
         trans = memory.translation_for(locale, phrase)
 
         expect(trans).to(
-          eq('Klicke auf {0} Lumos Labs')
+          eq('Klicke auf {0} Lumos %{foo} Labs')
         )
       end
     end
