@@ -16,7 +16,9 @@ class TmxFixture
     end
 
     def wrap_placeholders(text)
-      text.gsub(/(\{\d+\})/) { "<ph>#{$1}</ph>" }
+      text.gsub(/(\{\d+\})/) do
+        "<ph type=\"x-smartling-placeholder\">#{$1}</ph>"
+      end
     end
 
     def method_missing(method_name, *args, &block)
