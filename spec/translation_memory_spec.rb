@@ -213,6 +213,22 @@ describe TranslationMemory do
       end
     end
 
+    context 'with a translation containing extraneous whitespace' do
+      let(:tmx_contents) do
+        TmxFixture.load('whitespace')
+      end
+
+      it "matches even if the phrase key doesn't contain the same whitespace" do
+        phrase = InMemoryDataStore::Phrase.create(
+          key: 'foobarbaz',
+          meta_key: 'foo.bar'
+        )
+
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to eq('foosbar')
+      end
+    end
+
     context 'with a translation memory containing non-normalized text' do
       let(:tmx_contents) do
         TmxFixture.load('single', {
