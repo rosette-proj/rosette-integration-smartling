@@ -109,7 +109,6 @@ module Rosette
         end
 
         def resolves_with_html_entities?(key, variant)
-          binding.pry
           replace_entities(key).eql?(replace_entities(variant))
         end
 
