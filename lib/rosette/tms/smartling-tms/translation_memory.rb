@@ -1,5 +1,6 @@
 # encoding: UTF-8
 
+require 'htmlentities'
 require 'twitter_cldr'
 require 'digest/sha1'
 require 'thread'
@@ -17,6 +18,11 @@ module Rosette
           # https://en.wikipedia.org/wiki/Unicode_character_property#General_Category
           '[[:Zs:][:Zl:][:Zp:][:Cc:]]+'
         ).to_regexp
+
+        RESOLVE_PIPELINE = [
+          :resolves_exactly?, :resolves_with_html_entities?,
+          :resolves_ignoring_whitespace?
+        ]
 
         attr_reader :translation_hash, :configurator
 
@@ -68,13 +74,7 @@ module Rosette
 
         # resolves placeholders and paired tags, returns a string
         def resolve(units, locale, phrase)
-          unit_candidates = resolve_exact(units, locale, phrase)
-
-          if unit_candidates.empty?
-            unit_candidates = resolve_ignoring_whitespace(
-              units, locale, phrase
-            )
-          end
+          unit_candidates = resolve_units(units, locale, phrase)
 
           # try to get the most recent one
           unit = unit_candidates.last
@@ -88,40 +88,55 @@ module Rosette
           end
         end
 
-        def resolve_exact(units, locale, phrase)
-          units.select do |unit|
-            can_resolve?(unit, locale, phrase)
+        def resolve_units(units, locale, phrase)
+          RESOLVE_PIPELINE.each do |step|
+            candidates = units.select do |unit|
+              can_resolve?(unit, locale, phrase) do |key, variant|
+                normalize(key, variant) do |n_key, n_variant|
+                  send(step, n_key, n_variant)
+                end
+              end
+            end
+
+            return candidates unless candidates.empty?
           end
+
+          []
         end
 
-        def resolve_ignoring_whitespace(units, locale, phrase)
-          units.select do |unit|
-            can_resolve?(unit, locale, phrase, true)
-          end
+        def resolves_exactly?(key, variant)
+          key.eql?(variant)
         end
 
-        def can_resolve?(unit, locale, phrase, ignore_whitespace = false)
+        def resolves_with_html_entities?(key, variant)
+          binding.pry
+          replace_entities(key).eql?(replace_entities(variant))
+        end
+
+        def resolves_ignoring_whitespace?(key, variant)
+          strip_whitespace(key).eql?(strip_whitespace(variant))
+        end
+
+        def can_resolve?(unit, locale, phrase)
           placeholder_map = build_placeholder_map(phrase, unit)
 
           if variant = find_variant(unit, repo_config.source_locale)
-            normalized_eql?(
-              phrase.key, resolve_variant(variant, placeholder_map),
-              ignore_whitespace
-            )
+            yield phrase.key, resolve_variant(variant, placeholder_map)
           else
             false
           end
         end
 
-        def normalized_eql?(str1, str2, ignore_whitespace = false)
-          norm_str1 = smartling_normalize(cldr_normalize(str1))
-          norm_str2 = smartling_normalize(cldr_normalize(str2))
+        def replace_entities(str)
+          coder.decode(str)
+        end
 
-          if ignore_whitespace
-            strip_whitespace(norm_str1).eql?(strip_whitespace(norm_str2))
-          else
-            norm_str1.eql?(norm_str2)
-          end
+        def coder
+          @coder ||= HTMLEntities.new
+        end
+
+        def normalize(*args)
+          yield args.map { |arg| smartling_normalize(cldr_normalize(arg)) }
         end
 
         def strip_whitespace(str)

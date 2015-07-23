@@ -245,6 +245,22 @@ describe TranslationMemory do
       end
     end
 
+    context 'with a translation containing html entities' do
+      let(:tmx_contents) do
+        TmxFixture.load('html_entities')
+      end
+
+      it 'returns the correct translation' do
+        phrase = InMemoryDataStore::Phrase.create(
+          key: '&larr; Other Awesome Games',
+          meta_key: 'foo.bar'
+        )
+
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to eq('← Andere Awesome-Spiele')
+      end
+    end
+
     context 'with a translation memory containing non-normalized text' do
       let(:tmx_contents) do
         TmxFixture.load('single', {
