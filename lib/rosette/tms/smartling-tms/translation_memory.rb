@@ -12,6 +12,11 @@ module Rosette
         DEFAULT_HASH = {}.freeze
         PLURAL_REGEX = /\.?(zero|one|two|few|many|other)\z/
         PLACEHOLDER_TYPE = 'x-smartling-placeholder'
+        WHITESPACE_REGEX = TwitterCldr::Shared::UnicodeRegex.compile(
+          # space separators, line separators, paragraph separators, control characters
+          # https://en.wikipedia.org/wiki/Unicode_character_property#General_Category
+          '[[:Zs:][:Zl:][:Zp:][:Cc:]]+'
+        ).to_regexp
 
         attr_reader :translation_hash, :configurator
 
@@ -63,42 +68,71 @@ module Rosette
 
         # resolves placeholders and paired tags, returns a string
         def resolve(units, locale, phrase)
-          unit_candidates = units.select do |unit|
-            can_resolve?(unit, locale, phrase)
+          unit_candidates = resolve_exact(units, locale, phrase)
+
+          if unit_candidates.empty?
+            unit_candidates = resolve_ignoring_whitespace(
+              units, locale, phrase
+            )
           end
 
           # try to get the most recent one
           unit = unit_candidates.last
 
-          # If no unit can be found, return the original English string
           if unit && variant = find_variant(unit, locale)
             placeholder_map = build_placeholder_map(phrase, unit)
             resolve_variant(variant, placeholder_map)
           else
+            # If no matching unit can be found, return the original English string
             phrase.key
           end
         end
 
-        def can_resolve?(unit, locale, phrase)
+        def resolve_exact(units, locale, phrase)
+          units.select do |unit|
+            can_resolve?(unit, locale, phrase)
+          end
+        end
+
+        def resolve_ignoring_whitespace(units, locale, phrase)
+          units.select do |unit|
+            can_resolve?(unit, locale, phrase, true)
+          end
+        end
+
+        def can_resolve?(unit, locale, phrase, ignore_whitespace = false)
           placeholder_map = build_placeholder_map(phrase, unit)
 
           if variant = find_variant(unit, repo_config.source_locale)
             normalized_eql?(
-              phrase.key,
-              resolve_variant(variant, placeholder_map)
+              phrase.key, resolve_variant(variant, placeholder_map),
+              ignore_whitespace
             )
           else
             false
           end
         end
 
-        def normalized_eql?(str1, str2)
-          smartling_normalize(TwitterCldr::Normalization.normalize(str1)).eql?(
-            smartling_normalize(TwitterCldr::Normalization.normalize(str2))
-          )
+        def normalized_eql?(str1, str2, ignore_whitespace = false)
+          norm_str1 = smartling_normalize(cldr_normalize(str1))
+          norm_str2 = smartling_normalize(cldr_normalize(str2))
+
+          if ignore_whitespace
+            strip_whitespace(norm_str1).eql?(strip_whitespace(norm_str2))
+          else
+            norm_str1.eql?(norm_str2)
+          end
         end
 
-        def smartling_normalize(str)
+        def strip_whitespace(str)
+          str.gsub(WHITESPACE_REGEX, '')
+        end
+
+        def cldr_normalize(str)
+          TwitterCldr::Normalization.normalize(str)
+        end
+
+        def smartling_normalize(str, ignore_whitespace = false)
           str.gsub("\r", "\n").strip
         end
 
