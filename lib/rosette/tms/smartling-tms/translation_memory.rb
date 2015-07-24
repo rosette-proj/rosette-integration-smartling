@@ -90,27 +90,21 @@ module Rosette
 
         def resolve_units(units, locale, phrase)
           candidates = resolve_units_with_pipeline(units, locale, phrase)
+          return candidates unless candidates.empty?
 
-          if candidates.empty?
-            opening_tag, closing_tag = get_wrapping_html_tags(phrase.key)
+          opening_tag, closing_tag = get_wrapping_html_tags(phrase.key)
+          return [] unless opening_tag && closing_tag
 
-            if opening_tag && closing_tag
-              units = units.map do |unit|
-                unit.copy.tap do |unit_copy|
-                  unit_copy.variants.each do |variant|
-                    variant.elements.insert(0, opening_tag)
-                    variant.elements << closing_tag
-                  end
-                end
+          units.map! do |unit|
+            unit.copy.tap do |unit_copy|
+              unit_copy.variants.each do |variant|
+                variant.elements.insert(0, opening_tag)
+                variant.elements << closing_tag
               end
-
-              resolve_units_with_pipeline(units, locale, phrase)
-            else
-              []
             end
-          else
-            candidates
           end
+
+          resolve_units_with_pipeline(units, locale, phrase)
         end
 
         def get_wrapping_html_tags(str)
