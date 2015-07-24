@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'htmlentities', '~> 4.3'
   s.add_dependency 'nokogiri', '1.6'
   s.add_dependency 'smartling', '~> 0.5'
-  s.add_dependency 'tmx-parser', '~> 1.0'
+  s.add_dependency 'tmx-parser', '~> 1.1'
   s.add_dependency 'twitter_cldr', '~> 3.2'
 
   s.require_path = 'lib'
