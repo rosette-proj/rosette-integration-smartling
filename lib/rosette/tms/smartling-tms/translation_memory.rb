@@ -89,6 +89,35 @@ module Rosette
         end
 
         def resolve_units(units, locale, phrase)
+          candidates = resolve_units_with_pipeline(units, locale, phrase)
+          return candidates unless candidates.empty?
+
+          opening_tag, closing_tag = get_wrapping_html_tags(phrase.key)
+          return [] unless opening_tag && closing_tag
+
+          units.map! do |unit|
+            unit.copy.tap do |unit_copy|
+              unit_copy.variants.each do |variant|
+                variant.elements.insert(0, opening_tag)
+                variant.elements << closing_tag
+              end
+            end
+          end
+
+          resolve_units_with_pipeline(units, locale, phrase)
+        end
+
+        def get_wrapping_html_tags(str)
+          if str =~ /\A(<[^>]+>)/
+            opening_tag = $1
+
+            if str =~ /(<\/[^>]+>)\z/
+              [opening_tag, $1]
+            end
+          end
+        end
+
+        def resolve_units_with_pipeline(units, locale, phrase)
           RESOLVE_PIPELINE.each do |step|
             candidates = units.select do |unit|
               can_resolve?(unit, locale, phrase) do |key, variant|
@@ -119,11 +148,15 @@ module Rosette
         def can_resolve?(unit, locale, phrase)
           placeholder_map = build_placeholder_map(phrase, unit)
 
-          if variant = find_variant(unit, repo_config.source_locale)
+          if variant = source_variant_for(unit)
             yield phrase.key, resolve_variant(variant, placeholder_map)
           else
             false
           end
+        end
+
+        def source_variant_for(unit)
+          find_variant(unit, repo_config.source_locale)
         end
 
         def replace_entities(str)

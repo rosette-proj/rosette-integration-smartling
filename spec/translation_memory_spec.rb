@@ -261,6 +261,22 @@ describe TranslationMemory do
       end
     end
 
+    context 'with a phrase containing wrapping html tags' do
+      let(:tmx_contents) do
+        TmxFixture.load('wrapping_html')
+      end
+
+      it "returns the translation wrapped in the same tags (even though the tags don't officially exist)" do
+        phrase = InMemoryDataStore::Phrase.create(
+          key: '<u>Our use of cookies</u>',
+          meta_key: 'foo.bar'
+        )
+
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to eq('<u>Verwendung von Cookies</u>')
+      end
+    end
+
     context 'with a translation memory containing non-normalized text' do
       let(:tmx_contents) do
         TmxFixture.load('single', {
