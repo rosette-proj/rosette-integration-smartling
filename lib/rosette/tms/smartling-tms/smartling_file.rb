@@ -9,12 +9,11 @@ module Rosette
       class SmartlingFile
         PhraseStorageGranularity = Rosette::Queuing::Commits::PhraseStorageGranularity
 
-        attr_reader :configurator, :commit_id, :statuses, :granularity
+        attr_reader :configurator, :commit_id, :statuses
 
-        def initialize(configurator, commit_id, granularity = PhraseStorageGranularity::COMMIT)
+        def initialize(configurator, commit_id)
           @configurator = configurator
           @commit_id = commit_id
-          @granularity = granularity
         end
 
         def phrase_count
@@ -149,6 +148,10 @@ module Rosette
           @commit_log ||= rosette_config.datastore.lookup_commit_log(
             repo_config.name, commit_id
           )
+        end
+
+        def granularity
+          configurator.phrase_storage_granularity
         end
 
         def rev_commit

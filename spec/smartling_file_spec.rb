@@ -66,7 +66,11 @@ describe SmartlingFile do
 
   let(:phrase) { InMemoryDataStore::Phrase.create(key: 'foobar', meta_key: 'foo.bar') }
   let(:granularity) { Commits::PhraseStorageGranularity::COMMIT }
-  let(:file) { SmartlingFile.new(configurator, commit_id, granularity) }
+  let(:file) { SmartlingFile.new(configurator, commit_id) }
+
+  before(:each) do
+    configurator.set_phrase_storage_granularity(granularity)
+  end
 
   context 'with a canned status from the smartling api' do
     before(:each) do

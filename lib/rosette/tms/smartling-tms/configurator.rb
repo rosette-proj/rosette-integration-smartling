@@ -5,12 +5,15 @@ module Rosette
     module SmartlingTms
 
       class Configurator
+        PhraseStorageGranularity = Rosette::Queuing::Commits::PhraseStorageGranularity
+
         DEFAULT_PARSE_FREQUENCY = 3600  # one hour in seconds
         DEFAULT_THREAD_POOL_SIZE = 10
+        DEFAULT_PHRASE_STORAGE_GRANULARITY = PhraseStorageGranularity::COMMIT
 
         attr_reader :rosette_config, :repo_config
         attr_reader :api_options, :serializer_id, :directives, :parse_frequency
-        attr_reader :thread_pool_size
+        attr_reader :thread_pool_size, :phrase_storage_granularity
 
         def initialize(rosette_config, repo_config)
           @api_options = {}
@@ -20,6 +23,7 @@ module Rosette
           @repo_config = repo_config
           @thread_pool_size = DEFAULT_THREAD_POOL_SIZE
           @parse_frequency = DEFAULT_PARSE_FREQUENCY
+          @phrase_storage_granularity = DEFAULT_PHRASE_STORAGE_GRANULARITY
         end
 
         # Options used to build a SmartlingApi that can communicate with the
@@ -44,6 +48,10 @@ module Rosette
 
         def set_thread_pool_size(thread_pool_size)
           @thread_pool_size = thread_pool_size
+        end
+
+        def set_phrase_storage_granularity(granularity)
+          @phrase_storage_granularity = granularity
         end
 
         def smartling_api
