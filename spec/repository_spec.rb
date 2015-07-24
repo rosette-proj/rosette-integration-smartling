@@ -14,6 +14,7 @@ describe Repository do
 
   let(:fixture) do
     load_repo_fixture(repo_name) do |config, repo_config|
+      config.use_datastore('in-memory')
       repo_config.add_locale(locale_code)
       repo_config.use_tms('smartling') do |tms_config|
         tms_config.set_serializer('test/test')
@@ -42,6 +43,17 @@ describe Repository do
   end
 
   let(:file) { SmartlingFile.new(configurator, commit_id) }
+
+  let!(:commit_log) do
+    InMemoryDataStore::CommitLog.create(
+      status: PhraseStatus::FETCHED,
+      repo_name: repo_name,
+      commit_id: commit_id,
+      phrase_count: 0,
+      commit_datetime: nil,
+      branch_name: 'refs/heads/origin/master'
+    )
+  end
 
   context 'with a translation memory' do
     let(:tmx_fixture) { TmxFixture.load('double') }

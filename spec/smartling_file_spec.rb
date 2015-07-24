@@ -6,6 +6,7 @@ include Rosette::Tms
 include Rosette::Tms::SmartlingTms
 include Rosette::Core
 include Rosette::DataStores
+include Rosette::Queuing
 
 describe SmartlingFile do
   class Probe
@@ -37,6 +38,7 @@ describe SmartlingFile do
 
   let(:fixture) do
     load_repo_fixture(repo_name) do |config, repo_config|
+      config.use_datastore('in-memory')
       repo_config.add_locale(locale_code)
       repo_config.use_tms('smartling') do |tms_config|
         tms_config.set_serializer('test/test')
@@ -51,8 +53,20 @@ describe SmartlingFile do
     repo_config.tms.configurator
   end
 
+  let!(:commit_log) do
+    InMemoryDataStore::CommitLog.create(
+      status: PhraseStatus::FETCHED,
+      repo_name: repo_name,
+      commit_id: commit_id,
+      phrase_count: 0,
+      commit_datetime: nil,
+      branch_name: 'refs/heads/origin/my_branch'
+    )
+  end
+
   let(:phrase) { InMemoryDataStore::Phrase.create(key: 'foobar', meta_key: 'foo.bar') }
-  let(:file) { SmartlingFile.new(configurator, commit_id) }
+  let(:granularity) { Commits::PhraseStorageGranularity::COMMIT }
+  let(:file) { SmartlingFile.new(configurator, commit_id, granularity) }
 
   context 'with a canned status from the smartling api' do
     before(:each) do
@@ -124,6 +138,23 @@ describe SmartlingFile do
         status = file.translation_status
         expect(status).to be_a(TranslationStatus)
         expect(status.percent_translated(locale.code)).to eq(0.5)
+      end
+    end
+
+    context 'with phrase storage granularity set to BRANCH' do
+      let(:granularity) { Commits::PhraseStorageGranularity::BRANCH }
+
+      describe '#file_uri' do
+        it 'adds the git user, repo name, and branch name to the filename' do
+          expect(file.file_uri).to eq(
+            "#{repo_name}/#{git_user}/#{commit_log.branch_name}.txt"
+          )
+        end
+      end
+
+      it 'falls back to using the commit id if branch name is nil' do
+        commit_log.branch_name = nil
+        expect(file.file_uri).to eq("#{repo_name}/#{git_user}/#{commit_id}.txt")
       end
     end
   end

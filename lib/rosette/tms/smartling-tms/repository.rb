@@ -26,12 +26,12 @@ module Rosette
           lookup_translations(locale, [phrase]).first
         end
 
-        def store_phrases(phrases, commit_id)
-          file = SmartlingFile.new(configurator, commit_id)
+        def store_phrases(phrases, commit_id, granularity = PhraseStorageGranularity::COMMIT)
+          file = SmartlingFile.new(configurator, commit_id, granularity)
           file.upload(phrases)
         end
 
-        def store_phrase(phrase, commit_id)
+        def store_phrase(phrase, commit_id, granularity = PhraseStorageGranularity::COMMIT)
           store_phrases([phrase], commit_id)
         end
 

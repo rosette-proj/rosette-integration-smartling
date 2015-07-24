@@ -37,12 +37,12 @@ RSpec.configure do |config|
     Rosette::DataStores::InMemoryDataStore.all_entries.clear
   end
 
-  def create_file_uri(repo_name, author, commit_id)
-    "#{repo_name}/#{author}/#{commit_id}.yml"
+  def create_file_uri(repo_name, author, ref)
+    "#{repo_name}/#{author}/#{ref}.yml"
   end
 
-  def create_tmp_file_uri(repo_name, commit_id)
-    "#{repo_name}/#{commit_id}.yml"
+  def create_tmp_file_uri(repo_name, ref)
+    "#{repo_name}/#{ref}.yml"
   end
 
   def fake_hex_string(length = 10)
@@ -58,7 +58,7 @@ RSpec.configure do |config|
       'fileUri' => options['fileUri'] || create_file_uri(
         options.fetch('repo_name', fake_string),
         options.fetch('author', "#{fake_string} #{fake_string}"),
-        options.fetch('commit_id', fake_hex_string(38))
+        options.fetch('ref', fake_hex_string(38))
       ),
       'stringCount' => options.fetch('stringCount', 1),
       'wordCount' => options.fetch('wordCount', 2),
@@ -73,7 +73,7 @@ RSpec.configure do |config|
     create_file_entry(options).merge(
       'fileUri' => create_tmp_file_uri(
         options.fetch('repo_name', fake_string),
-        options.fetch('commit_id', fake_hex_string(38))
+        options.fetch('ref', fake_hex_string(38))
       )
     )
   end

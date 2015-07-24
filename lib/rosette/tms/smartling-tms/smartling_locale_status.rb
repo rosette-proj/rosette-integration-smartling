@@ -5,12 +5,12 @@ module Rosette
     module SmartlingTms
 
       class SmartlingLocaleStatus
-        attr_reader :repo_name, :commit_id
+        attr_reader :repo_name, :ref
         attr_reader :phrase_count, :translated_count, :file_uri
 
-        def initialize(repo_name, commit_id, phrase_count, translated_count, file_uri)
+        def initialize(repo_name, ref, phrase_count, translated_count, file_uri)
           @repo_name = repo_name
-          @commit_id = commit_id
+          @ref = ref
           @phrase_count = phrase_count
           @translated_count = translated_count
           @file_uri = file_uri
@@ -18,13 +18,14 @@ module Rosette
 
         def self.from_api_response(response)
           file_uri = response['fileUri']
-          repo_name, author, commit_id = file_uri.split('/')
-          commit_id = commit_id.chomp(File.extname(commit_id)) if commit_id
+          repo_name, author, *ref = file_uri.split('/')
+          ref = ref.join('/')
+          ref = ref.chomp(File.extname(ref))
           phrase_count = response['stringCount']
           translated_count = response['completedStringCount']
 
           new(
-            repo_name, commit_id, phrase_count,
+            repo_name, ref, phrase_count,
             translated_count, file_uri
           )
         end
