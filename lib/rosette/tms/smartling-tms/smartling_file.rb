@@ -25,15 +25,16 @@ module Rosette
         end
 
         def file_uri
-          filename = if branch_uri?
-            commit_log.branch_name
+          if branch_uri?
+            filename = commit_log.branch_name
+            author = 'rosette'
           else
-            commit_id
+            filename = commit_id
+            author = get_identity_string(rev_commit)
           end
 
           File.join(
-            repo_config.name,
-            get_identity_string(rev_commit),
+            repo_config.name, author,
             "#{filename}#{serializer_const.default_extension}"
           )
         end

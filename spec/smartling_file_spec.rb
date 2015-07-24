@@ -149,9 +149,9 @@ describe SmartlingFile do
       let(:granularity) { Commits::PhraseStorageGranularity::BRANCH }
 
       describe '#file_uri' do
-        it 'adds the git user, repo name, and branch name to the filename' do
+        it 'adds the repo name and branch name to the filename' do
           expect(file.file_uri).to eq(
-            "#{repo_name}/#{git_user}/#{commit_log.branch_name}.txt"
+            "#{repo_name}/rosette/#{commit_log.branch_name}.txt"
           )
         end
       end
