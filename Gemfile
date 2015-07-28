@@ -4,7 +4,7 @@ ruby '2.0.0', engine: 'jruby', engine_version: '1.7.15'
 
 gemspec
 
-gem 'rosette-core', github: 'rosette-proj/rosette-core'
+gem 'rosette-core', github: 'rosette-proj/rosette-core', branch: 'push_by_branch'
 
 group :development, :test do
   gem 'activemodel'
