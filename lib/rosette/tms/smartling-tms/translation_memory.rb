@@ -82,9 +82,6 @@ module Rosette
           if unit && variant = find_variant(unit, locale)
             placeholder_map = build_placeholder_map(phrase, unit)
             resolve_variant(variant, placeholder_map)
-          else
-            # If no matching unit can be found, return the original English string
-            phrase.key
           end
         end
 
