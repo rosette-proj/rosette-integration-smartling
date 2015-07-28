@@ -14,6 +14,9 @@ module Rosette
         attr_reader :rosette_config, :repo_config
         attr_reader :api_options, :serializer_id, :directives, :parse_frequency
         attr_reader :thread_pool_size, :phrase_storage_granularity
+        attr_reader :perform_deletions
+
+        alias_method :perform_deletions?, :perform_deletions
 
         def initialize(rosette_config, repo_config)
           @api_options = {}
@@ -24,6 +27,7 @@ module Rosette
           @thread_pool_size = DEFAULT_THREAD_POOL_SIZE
           @parse_frequency = DEFAULT_PARSE_FREQUENCY
           @phrase_storage_granularity = DEFAULT_PHRASE_STORAGE_GRANULARITY
+          @perform_deletions = true
         end
 
         # Options used to build a SmartlingApi that can communicate with the
@@ -52,6 +56,10 @@ module Rosette
 
         def set_phrase_storage_granularity(granularity)
           @phrase_storage_granularity = granularity
+        end
+
+        def set_perform_deletions(perform)
+          @perform_deletions = perform
         end
 
         def smartling_api

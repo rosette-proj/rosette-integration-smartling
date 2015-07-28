@@ -45,8 +45,10 @@ module Rosette
         end
 
         def finalize(commit_id)
-          file = SmartlingFile.new(configurator, commit_id)
-          file.delete
+          if configurator.perform_deletions?
+            file = SmartlingFile.new(configurator, commit_id)
+            file.delete
+          end
         end
 
         def re_download_memory

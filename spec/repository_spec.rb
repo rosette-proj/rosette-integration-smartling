@@ -131,5 +131,11 @@ describe Repository do
       expect(configurator.smartling_api).to receive(:delete).with(file.file_uri)
       repository.finalize(commit_id)
     end
+
+    it 'does not actually delete the file from smartling if configured not to' do
+      configurator.set_perform_deletions(false)
+      expect(configurator.smartling_api).to_not receive(:delete)
+      repository.finalize(commit_id)
+    end
   end
 end
