@@ -7,6 +7,8 @@ module Rosette
     module SmartlingTms
 
       class SmartlingFile
+        PhraseStorageGranularity = Rosette::Queuing::Commits::PhraseStorageGranularity
+
         attr_reader :configurator, :commit_id, :statuses
 
         def initialize(configurator, commit_id)
@@ -23,12 +25,17 @@ module Rosette
         end
 
         def file_uri
-          rev_commit = repo_config.repo.get_rev_commit(commit_id)
+          if branch_uri?
+            filename = commit_log.branch_name
+            author = 'rosette'
+          else
+            filename = commit_id
+            author = get_identity_string(rev_commit)
+          end
 
           File.join(
-            repo_config.name,
-            get_identity_string(rev_commit),
-            "#{commit_id}#{serializer_const.default_extension}"
+            repo_config.name, author,
+            "#{filename}#{serializer_const.default_extension}"
           )
         end
 
@@ -67,6 +74,11 @@ module Rosette
         end
 
         protected
+
+        def branch_uri?
+          commit_log.branch_name &&
+            granularity == PhraseStorageGranularity::BRANCH
+        end
 
         def locale_statuses
           @statuses ||= repo_config.locales.each_with_object({}) do |locale, ret|
@@ -131,6 +143,20 @@ module Rosette
 
         def serializer_const
           @serializer_const ||= Rosette::Core::SerializerId.resolve(serializer_id)
+        end
+
+        def commit_log
+          @commit_log ||= rosette_config.datastore.lookup_commit_log(
+            repo_config.name, commit_id
+          )
+        end
+
+        def granularity
+          configurator.phrase_storage_granularity
+        end
+
+        def rev_commit
+          @rev_commit ||= repo_config.repo.get_rev_commit(commit_id)
         end
 
         def rosette_config

@@ -11,14 +11,30 @@ describe SmartlingLocaleStatus do
     it 'extracts the repo name and commit id from the api response hash' do
       hash = create_file_entry(
         'repo_name' => 'awesome_repo',
-        'commit_id' => 'abc123',
+        'ref' => 'abc123',
         'author' => 'KathrynJaneway'
       )
 
       smartling_file_status.from_api_response(hash).tap do |file|
         expect(file.repo_name).to eq('awesome_repo')
-        expect(file.commit_id).to eq('abc123')
+        expect(file.ref).to eq('abc123')
         expect(file.file_uri).to eq('awesome_repo/KathrynJaneway/abc123.yml')
+      end
+    end
+
+    it 'extracts the repo name and branch name from the api response hash' do
+      hash = create_file_entry(
+        'repo_name' => 'awesome_repo',
+        'ref' => 'refs/remotes/origin/my_branch',
+        'author' => 'KathrynJaneway'
+      )
+
+      smartling_file_status.from_api_response(hash).tap do |file|
+        expect(file.repo_name).to eq('awesome_repo')
+        expect(file.ref).to eq('refs/remotes/origin/my_branch')
+        expect(file.file_uri).to eq(
+          'awesome_repo/KathrynJaneway/refs/remotes/origin/my_branch.yml'
+        )
       end
     end
 
