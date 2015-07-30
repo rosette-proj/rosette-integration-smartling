@@ -45,9 +45,17 @@ module Rosette
         end
 
         def finalize(commit_id)
+          file = SmartlingFile.new(configurator, commit_id)
+
           if configurator.perform_deletions?
-            file = SmartlingFile.new(configurator, commit_id)
             file.delete
+          else
+            Rosette.logger.info(
+              "Finalizing #{file.file_uri}, however rosette-tms-smartling is "\
+                "configured to not delete files from Smartling. Call the "\
+                "set_perform_deletions(boolean) method on the configurator to "\
+                "change this behavior."
+            )
           end
         end
 
