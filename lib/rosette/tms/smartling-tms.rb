@@ -7,6 +7,7 @@ module Rosette
   module Tms
 
     module SmartlingTms
+      autoload :PlaceholderScanner,          'rosette/tms/smartling-tms/placeholder_scanner'
       autoload :SmartlingApi,                'rosette/tms/smartling-tms/smartling_api'
       autoload :SmartlingUploader,           'rosette/tms/smartling-tms/smartling_uploader'
       autoload :SmartlingDownloader,         'rosette/tms/smartling-tms/smartling_downloader'

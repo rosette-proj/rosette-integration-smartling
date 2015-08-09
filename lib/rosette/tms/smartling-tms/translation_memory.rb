@@ -199,7 +199,12 @@ module Rosette
         end
 
         def phrase_placeholders_for(phrase)
-          phrase.key.scan(placeholder_regex)
+          placeholder_scanner.scan(phrase.key)
+        end
+
+        def placeholder_scanner
+          @placeholder_scanner ||=
+            PlaceholderScanner.new(repo_config.placeholder_regexes)
         end
 
         def variant_placeholders_for(variant)
@@ -209,7 +214,7 @@ module Rosette
                 ret << el.text
               else
                 str = el.respond_to?(:text) ? el.text : el
-                ret.concat(find_inline_placeholders(str))
+                ret.concat(placeholder_scanner.scan(str))
             end
           end
         end
