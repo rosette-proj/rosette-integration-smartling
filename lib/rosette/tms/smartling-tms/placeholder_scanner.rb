@@ -42,6 +42,8 @@ module Rosette
         def process_next(token, pipeline, pipe_idx)
           if pipe = pipeline[pipe_idx + 1]
             send("process_#{pipe}", token, pipeline, pipe_idx + 1)
+          else
+            []
           end
         end
 
