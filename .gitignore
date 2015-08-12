@@ -2,4 +2,3 @@ Gemfile.lock
 .DS_Store
 pkg/
 classpath.txt
-tester.rb
