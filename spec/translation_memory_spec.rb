@@ -286,7 +286,7 @@ describe TranslationMemory do
 
     context 'with a translation containing placeholders in html attributes' do
       let(:tmx_contents) do
-        TmxFixture.load('html_placeholder_attributes_test')
+        TmxFixture.load('complex_html_placeholder_attributes')
       end
 
       it 'returns the correct translation' do
@@ -295,21 +295,13 @@ describe TranslationMemory do
           key: "To ensure uninterrupted access, your subscription will auto-renew every %{rate} "\
                "at a rate of %{renewal_rate} using the payment method provided. "\
                "You may turn off auto-renewal at any time through your Account Settings. "\
-               "By clicking '%{button_phrase}' you allow us to charge the payment method provided, "\
-               "and you agree to our <a href='%{tos_link}' class='tos-link' target='_blank'>Terms of Service</a> "\
-               "and <a href='%{payment_policy_link}' class='payment-policy-link' target='_blank'>Payment Policy</a>."
         )
 
         trans = memory.translation_for(locale, phrase)
         expect(trans).to eq(
           "Um ununterbrochenen Zugriff zu gewährleisten, wird Ihr Abonnement mithilfe der "\
-          "hinterlegten Zahlungsmethode automatisch %{renewal_rate} zu einem Preis von %{rate} "\
-          "verlängert. Sie können die automatische Verlängerung jederzeit über Ihre Account-Einstellungen "\
-          "deaktivieren. <a href='%{tos_link}' class='tos-link' target='_blank'>"\
-          "</a><a href='%{payment_policy_link}' class='payment-policy-link' target='_blank'></a>"\
-          "Durch einen Klick %{button_phrase}erklären Sie sich damit einverstanden, dass wir den "\
-          "Mitgliedsbeitrag mit der von Ihnen hinterlegten Zahlungsmethode abbuchen. Des Weiteren "\
-          "stimmen Sie unseren Datenschutzrichtlinien und Nutzungsbedingungen zu."
+          "hinterlegten Zahlungsmethode automatisch %{renewal_rate} zu einem Preis von %{rate} verlängert. "\
+          "Sie können die automatische Verlängerung jederzeit über Ihre Account-Einstellungen deaktivieren."\
         )
       end
     end
