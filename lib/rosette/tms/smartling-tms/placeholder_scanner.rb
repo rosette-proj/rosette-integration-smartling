@@ -72,6 +72,8 @@ module Rosette
           else
             text
           end
+        rescue => e
+          text
         end
 
         def regex_union
