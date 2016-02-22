@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.platform = Gem::Platform::RUBY
   s.has_rdoc = true
 
-  s.add_dependency 'concurrent-ruby', '~> 0.7'
+  s.add_dependency 'concurrent-ruby', '~> 1.0'
   s.add_dependency 'htmlentities', '~> 4.3'
   s.add_dependency 'nokogiri', '1.6'
   s.add_dependency 'smartling', '~> 0.5'
