@@ -49,8 +49,10 @@ module Rosette
 
         def process_html(token, pipeline, pipe_idx)
           odd_map(token.split(HTML_TAG_REGEX), pipeline, pipe_idx) do |tag|
-            tag.scan(HTML_ATTRIBUTE_REGEX).flatten.map do |frag|
-              strip_quotes(frag)
+            odd_map(tag.split(HTML_ATTRIBUTE_REGEX), pipeline, pipe_idx) do |frag|
+              unquoted = strip_quotes(frag)
+              next_ph = process_next(unquoted, pipeline, pipe_idx)
+              next_ph.size == 0 ? Array(unquoted) : next_ph
             end
           end
         end

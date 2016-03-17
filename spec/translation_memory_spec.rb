@@ -284,6 +284,29 @@ describe TranslationMemory do
       end
     end
 
+    context 'with a translation containing a placeholder for all html attributes' do
+      let(:tmx_contents) do
+        TmxFixture.load('html_placeholder_attributes_all')
+      end
+
+      it 'returns the correct translation' do
+        phrase = InMemoryDataStore::Phrase.create(
+          meta_key: 'foo.bar',
+          key: 'Enjoy easy, accessible customer service. Please visit '\
+            '<a %{help_link}>Help Center</a> '\
+            'for FAQs. Or you can get a direct reply from a support agent.'
+        )
+
+        trans = memory.translation_for(locale, phrase)
+        expect(trans).to eq(
+          'Unser Customer-Service ist leicht erreichbar.  Besuchen Sie '\
+          'unser Help-Center und finden Sie dort zahlreiche FAQs. '\
+          '<a %{help_link}></a>Oder erhalten Sie '\
+          'eine persönliche Antwort von einem unserer Support-Mitarbeiter. '
+        )
+      end
+    end
+
     context 'with a phrase containing wrapping html tags' do
       let(:tmx_contents) do
         TmxFixture.load('wrapping_html')

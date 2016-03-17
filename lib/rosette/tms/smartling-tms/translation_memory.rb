@@ -212,6 +212,8 @@ module Rosette
             case el
               when TmxParser::Placeholder
                 ret << el.text
+              when TmxParser::BeginPair, TmxParser::EndPair
+                ret.concat(find_inline_placeholders(el.text))
               else
                 str = el.respond_to?(:text) ? el.text : el
                 ret.concat(placeholder_scanner.scan(str))
